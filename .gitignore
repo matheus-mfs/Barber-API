@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.env/
+.venv/
+
+# Environment variables
+.env
+
+# VSCode
+.vscode/
+
+# SQLite
+*.db
+*.sqlite3
+
+# Alembic cache
+alembic/__pycache__/
+
+
+# Temporary files
+tmp/
+.temp/
