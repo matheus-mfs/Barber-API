@@ -1,13 +1,58 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from schemas import UserSchema, LoginSchema
+from sqlalchemy.orm import Session
+from models import User
+from core.auth import bcrypt_context, authenticate_user, create_token, check_token
+from core.database import get_session
+from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/login")
-def login():
-    # TODO: autenticar usuário e retornar token
-    pass
+@router.post("/create_account")
+def create_account(user_schema: UserSchema, session: Session = Depends(get_session)):
 
-@router.post("/logout")
-def logout():
-    # TODO: invalidar token / sessão
-    pass
+    user = session.query(User).filter(User.email==user_schema.email).first()
+    if user:
+        raise HTTPException(status_code=400, detail="E-mail do usuario ja cadastrado")
+    else:
+        password_encrypted = bcrypt_context.hash(user_schema.password)
+        new_user = User(user_schema.tenant_id, user_schema.name, user_schema.email, password_encrypted, user_schema.role, user_schema.status, user_schema.admin)
+        session.add(new_user)
+        session.commit()
+        return{"message":"User cadastrado "}
+    
+@router.post("/login")
+def login(login_schema: LoginSchema, session: Session = Depends(get_session)):
+    user = authenticate_user(login_schema.email, login_schema.password, session)
+    if not user:
+        raise HTTPException(status_code=400, detail="Usuario não encontrado, ou credenciais invalidas")
+    else:
+        access_token = create_token(user.id)
+        refresh_token = create_token(user.id, duration_token=timedelta(days=7))
+        return{"access_token": access_token,
+               "refresh_token": refresh_token,
+               "token_type":"Bearer"}
+
+    
+@router.post("/login-form")
+def login_form(date_form: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    user = authenticate_user(date_form.username, date_form.password, session)
+    if not user:
+        raise HTTPException(status_code=400, detail="Usuario não encontrado, ou credenciais invalidas")
+    else:
+        access_token = create_token(user.id)
+        refresh_token = create_token(user.id, duration_token=timedelta(days=7))
+        return{"access_token": access_token,
+               "refresh_token": refresh_token,
+               "token_type":"Bearer"}
+
+    
+@router.get("/refresh")
+def user_refresh_token(user: User = Depends(check_token)):
+    access_token = create_token(user.id)
+
+    return{
+        "access_token": access_token,
+        "token_type":"Bearer"
+        }

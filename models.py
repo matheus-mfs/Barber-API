@@ -106,3 +106,9 @@ class Appointment(Base):
         self.slot_id = slot_id
         self.status = status
         
+# iniciar o alembic: poetry run alembic init alembic
+
+# criar a migração: poetry run alembic revision --autogenerate -m "menssagem"
+
+# executar a migração: poetry run alembic upgrade head
+
