@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Numeric
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Numeric, Time
 from core.database import Base
 from datetime import timezone, datetime
 
@@ -7,11 +7,15 @@ class Tenant(Base):
 
     id = Column("id", Integer, nullable=False, primary_key=True, autoincrement=True)
     name = Column("name", String)
+    slug = Column("slug", String, unique=True)
+    service_duration = Column("service_duration", Integer)
     status = Column("status", Boolean, default=True)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, name, status=True):
+    def __init__(self, name, slug, service_duration, status=True):
         self.name = name
+        self.slug = slug
+        self.service_duration = service_duration
         self.status = status
 
 class User(Base):
@@ -22,16 +26,20 @@ class User(Base):
     name = Column("name", String)
     email = Column("email", String, unique=True, nullable=False)
     password = Column("password", String)
+    work_start_time = Column("work_start_time", Time)
+    work_end_time = Column("work_end_time", Time)
     role = Column("role", String) # Barbeiro ou Admin
     status = Column("status", Boolean, default=True)
     admin = Column("admin", Boolean, default=False)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, name, email, password, role, status=True, admin=False):
+    def __init__(self, tenant_id, name, email, password, work_start_time, work_end_time, role, status=True, admin=False):
         self.tenant_id = tenant_id
         self.name = name
         self.email = email
         self.password = password
+        self.work_start_time = work_start_time
+        self.work_end_time = work_end_time
         self.role = role
         self.status = status
         self.admin = admin
@@ -43,14 +51,13 @@ class Client(Base):
     tenant_id = Column("tenant_id", Integer, ForeignKey("tenants.id"), nullable=False )
     name = Column("name", String)
     telephone = Column("telephone", String)
-    email = Column("email", String, unique=True, nullable=False)
+    email = Column("email", String, unique=True)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, name, telephone, email):
+    def __init__(self, tenant_id, name, telephone):
         self.tenant_id = tenant_id
         self.name = name
         self.telephone = telephone
-        self.email = email
 
 class Service(Base):
     __tablename__ = "services"

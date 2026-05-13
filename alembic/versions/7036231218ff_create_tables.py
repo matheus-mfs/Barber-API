@@ -1,8 +1,8 @@
-"""menssagem
+"""create tables
 
-Revision ID: 656bb91a6a0f
+Revision ID: 7036231218ff
 Revises: 
-Create Date: 2026-05-12 20:24:38.192900
+Create Date: 2026-05-13 17:16:57.859798
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '656bb91a6a0f'
+revision: str = '7036231218ff'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,16 +24,19 @@ def upgrade() -> None:
     op.create_table('tenants',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(), nullable=True),
+    sa.Column('slug', sa.String(), nullable=True),
+    sa.Column('service_duration', sa.Integer(), nullable=True),
     sa.Column('status', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('slug')
     )
     op.create_table('clients',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('tenant_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('telephone', sa.String(), nullable=True),
-    sa.Column('email', sa.String(), nullable=False),
+    sa.Column('email', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -56,6 +59,8 @@ def upgrade() -> None:
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password', sa.String(), nullable=True),
+    sa.Column('work_start_time', sa.DateTime(), nullable=True),
+    sa.Column('work_end_time', sa.DateTime(), nullable=True),
     sa.Column('role', sa.String(), nullable=True),
     sa.Column('status', sa.Boolean(), nullable=True),
     sa.Column('admin', sa.Boolean(), nullable=True),

@@ -7,7 +7,7 @@ from core.auth import check_token
 from models import User
 from schemas import UserEditSchema, UserResponseSchema
 
-router = APIRouter(prefix="/usuarios", tags=["usuarios"])
+router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/list-user", response_model=List[UserResponseSchema])
 def list_user(session : Session = Depends(get_session), current_user : User = Depends(check_token)):
@@ -17,8 +17,8 @@ def list_user(session : Session = Depends(get_session), current_user : User = De
     users = session.query(User).filter(User.tenant_id==current_user.tenant_id).all()
     return users
 
-@router.get("/search/{id_user}", response_model=UserResponseSchema)
-def buscar_usuario(id_user : int, session : Session = Depends(get_session), current_user : User = Depends(check_token)):
+@router.get("/search-users/{id_user}", response_model=UserResponseSchema)
+def search_user(id_user : int, session : Session = Depends(get_session), current_user : User = Depends(check_token)):
     # verificar se o usuario é admin
     if not current_user.admin:
         raise HTTPException(status_code=400, detail="Acesso negado")
@@ -29,8 +29,8 @@ def buscar_usuario(id_user : int, session : Session = Depends(get_session), curr
 
     return user
 
-@router.put("/edit-user/{id}")
-def atualizar_usuario(id_user : int, user_edit_schema : UserEditSchema, session : Session = Depends(get_session), current_user : User = Depends(check_token)):
+@router.put("/edit-user/{id_user}")
+def edit_user(id_user : int, user_edit_schema : UserEditSchema, session : Session = Depends(get_session), current_user : User = Depends(check_token)):
     # verificar se o usuario é admin ou o proprio usuario editar o proprio cadastro
     if not current_user.admin and current_user.id != id_user:
         raise HTTPException(status_code=400, detail="Acesso negado")
@@ -45,7 +45,7 @@ def atualizar_usuario(id_user : int, user_edit_schema : UserEditSchema, session 
     session.commit()
     return{"mensagem":"Dados Atualizados com sucesso"}
     
-@router.post("/disable-user/{id}")
+@router.post("/disable-user/{id_user}")
 def disable_user(id_user : int, session : Session = Depends(get_session), current_user : User = Depends(check_token)):
     # verificar se o usuario é admin e verifica se o usuario para alterar existe
     if not current_user.admin:
@@ -61,7 +61,7 @@ def disable_user(id_user : int, session : Session = Depends(get_session), curren
         "mensagem": f"usuario {user.name} desativado "
     }
 
-@router.post("/active-user/{id}")
+@router.post("/active-user/{id_user}")
 def active_user(id_user : int, session : Session = Depends(get_session), current_user : User = Depends(check_token)):
     # verificar se o usuario é admin e verifica se o usuario para alterar existe
     if not current_user.admin:
