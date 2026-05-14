@@ -2,29 +2,30 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from schemas import UserSchema, LoginSchema
 from sqlalchemy.orm import Session
-from models import User
+from models import User, Tenant
 from core.auth import bcrypt_context, authenticate_user, create_token, check_token
 from core.database import get_session
+from core.dependencies import get_tenant
 from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/create_account")
-def create_account(user_schema: UserSchema, session: Session = Depends(get_session)):
+def create_account(user_schema: UserSchema, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
 
-    user = session.query(User).filter(User.email==user_schema.email).first()
+    user = session.query(User).filter(User.email==user_schema.email, User.tenant_id==current_tenant.id).first()
     if user:
         raise HTTPException(status_code=400, detail="E-mail do usuario ja cadastrado")
     else:
         password_encrypted = bcrypt_context.hash(user_schema.password)
-        new_user = User(user_schema.tenant_id, user_schema.name, user_schema.email, password_encrypted, user_schema.role, user_schema.status, user_schema.admin)
+        new_user = User(current_tenant.id, user_schema.name, user_schema.email, password_encrypted, user_schema.role, user_schema.status)
         session.add(new_user)
         session.commit()
         return{"message":"User cadastrado "}
     
 @router.post("/login")
-def login(login_schema: LoginSchema, session: Session = Depends(get_session)):
-    user = authenticate_user(login_schema.email, login_schema.password, session)
+def login(login_schema: LoginSchema, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
+    user = authenticate_user(login_schema.email, login_schema.password, current_tenant.id, session)
     if not user:
         raise HTTPException(status_code=400, detail="Usuario não encontrado, ou credenciais invalidas")
     else:
@@ -36,8 +37,8 @@ def login(login_schema: LoginSchema, session: Session = Depends(get_session)):
 
     
 @router.post("/login-form")
-def login_form(date_form: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
-    user = authenticate_user(date_form.username, date_form.password, session)
+def login_form(date_form: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
+    user = authenticate_user(date_form.username, date_form.password, current_tenant.id, session)
     if not user:
         raise HTTPException(status_code=400, detail="Usuario não encontrado, ou credenciais invalidas")
     else:

@@ -2,17 +2,30 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, time
 from decimal import Decimal
+from models import UserRole, Weekdays
+
+
+#-------------------------------------------------
+#               Tenant Schemas
+#-------------------------------------------------
+
+class TenantSchema(BaseModel):
+    name: str
+    status: Optional[bool]
+
+    class config:
+        from_attibutes = True  
+
+#-------------------------------------------------
+#               User Schemas
+#-------------------------------------------------
 
 class UserSchema(BaseModel):
-    tenant_id: int
     name: str
     email: str
     password: str
-    work_start_time: time
-    work_end_time: time
-    role: str
+    role: UserRole
     status: Optional[bool]
-    admin: Optional[bool] = False
 
     class config:
         from_attributes = True
@@ -20,7 +33,6 @@ class UserSchema(BaseModel):
 class UserEditSchema(BaseModel):
     name: str
     email: str
-    role: str
 
     class config:
         from_attributes = True
@@ -32,8 +44,7 @@ class UserResponseSchema(BaseModel):
     tenant_id: int
     email: str
     name: str
-    role: str
-    admin: bool
+    role: UserRole
 
     class Config:
         from_attributes = True
@@ -45,13 +56,23 @@ class LoginSchema(BaseModel):
     class config:
         from_attibutes = True   
 
-class TenantSchema(BaseModel):
+
+#-------------------------------------------------
+#               Client Schemas
+#-------------------------------------------------
+
+
+class ClientSchema(BaseModel):
     name: str
-    service_duration: int = 30
-    status: Optional[bool]
+    telephone: str
 
     class config:
         from_attibutes = True  
+
+
+#-------------------------------------------------
+#               Service Schemas
+#-------------------------------------------------
 
 class ServiceSchema(BaseModel):
     name: str
@@ -70,9 +91,30 @@ class ServiceEditSchema(BaseModel):
     class config:
         from_attibutes = True  
 
-class ClientSchema(BaseModel):
-    name: str
-    telephone: str
+#-------------------------------------------------
+#               Slot Schemas
+#-------------------------------------------------
+
+#-------------------------------------------------
+#               Appointment Schemas
+#-------------------------------------------------
+
+#-------------------------------------------------
+#               WorkSchedule Schemas
+#-------------------------------------------------
+class WorkScheduleSchema(BaseModel):
+    weekday: Weekdays
+    work_start: time
+    work_end: time
+    lunch_start: time
+    lunch_end: time
+    is_working: bool
+    
 
     class config:
         from_attibutes = True  
+    
+
+
+
+

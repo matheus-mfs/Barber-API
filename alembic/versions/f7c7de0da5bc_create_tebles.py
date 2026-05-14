@@ -1,8 +1,8 @@
-"""create tables
+"""create tebles
 
-Revision ID: 7036231218ff
+Revision ID: f7c7de0da5bc
 Revises: 
-Create Date: 2026-05-13 17:16:57.859798
+Create Date: 2026-05-14 12:23:23.866672
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7036231218ff'
+revision: str = 'f7c7de0da5bc'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,7 +25,6 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('slug', sa.String(), nullable=True),
-    sa.Column('service_duration', sa.Integer(), nullable=True),
     sa.Column('status', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -36,11 +35,9 @@ def upgrade() -> None:
     sa.Column('tenant_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('telephone', sa.String(), nullable=True),
-    sa.Column('email', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('services',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -59,15 +56,12 @@ def upgrade() -> None:
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password', sa.String(), nullable=True),
-    sa.Column('work_start_time', sa.DateTime(), nullable=True),
-    sa.Column('work_end_time', sa.DateTime(), nullable=True),
-    sa.Column('role', sa.String(), nullable=True),
+    sa.Column('role', sa.Enum('BARBER', 'ADMIN', 'DEV', name='userrole'), nullable=True),
     sa.Column('status', sa.Boolean(), nullable=True),
-    sa.Column('admin', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email')
+    sa.UniqueConstraint('tenant_id', 'email', name='uq_users_tenant_email')
     )
     op.create_table('slots',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -75,24 +69,40 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('date_time_init', sa.DateTime(), nullable=True),
     sa.Column('date_time_end', sa.DateTime(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('status', sa.Enum('FREE', 'BOOKED', 'BLOCKED', name='slotstatus'), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'date_time_init', name='uq_user_slot')
+    )
+    op.create_table('workschedules',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('weekday', sa.Enum('SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', name='weekdays'), nullable=True),
+    sa.Column('work_start', sa.Time(), nullable=True),
+    sa.Column('work_end', sa.Time(), nullable=True),
+    sa.Column('lunch_start', sa.Time(), nullable=True),
+    sa.Column('lunch_end', sa.Time(), nullable=True),
+    sa.Column('is_working', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id', 'weekday', name='uq_user_weekday')
     )
     op.create_table('appointments',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('tenant_id', sa.Integer(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=False),
     sa.Column('service_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('slot_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('status', sa.Enum('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', name='appointmentstatus'), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['client_id'], ['clients.id'], ),
     sa.ForeignKeyConstraint(['service_id'], ['services.id'], ),
     sa.ForeignKeyConstraint(['slot_id'], ['slots.id'], ),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
@@ -102,6 +112,7 @@ def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('appointments')
+    op.drop_table('workschedules')
     op.drop_table('slots')
     op.drop_table('users')
     op.drop_table('services')

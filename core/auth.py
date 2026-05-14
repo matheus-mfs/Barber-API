@@ -34,8 +34,8 @@ def create_token(id_user, duration_token=timedelta(minutes=settings.ACCESS_TOKEN
     encode_token = jwt.encode(dic_info, settings.SECRET_KEY, settings.ALGORITHM)
     return encode_token
 
-def authenticate_user(email, password, session):
-    user = session.query(User).filter(User.email==email).first()
+def authenticate_user(email, password, tenant, session):
+    user = session.query(User).filter(User.email==email, User.tenant_id==tenant).first()
     if not user:
         return False
     elif not bcrypt_context.verify(password, user.password):
