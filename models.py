@@ -36,11 +36,11 @@ class User(Base):
     name = Column("name", String)
     email = Column("email", String, nullable=False)
     password = Column("password", String)
-    role = Column("role", Enum(UserRole), default="barber") # Barbeiro ou Admin
+    role = Column("role", Enum(UserRole), default=UserRole.BARBER) # Barbeiro ou Admin
     status = Column("status", Boolean, default=True)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, name, email, password, role="barber", status=True):
+    def __init__(self, tenant_id, name, email, password, role=UserRole.BARBER, status=True):
         self.tenant_id = tenant_id
         self.name = name
         self.email = email
@@ -97,10 +97,10 @@ class Slot(Base):
     user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
     date_time_init = Column("date_time_init", DateTime)
     date_time_end = Column("date_time_end", DateTime)
-    status = Column("status", Enum(SlotStatus), default="free") #(FREE, BOOKED, BLOCKED)
+    status = Column("status", Enum(SlotStatus), default=SlotStatus.FREE) 
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, user_id, date_time_init, date_time_end, status="free"):
+    def __init__(self, tenant_id, user_id, date_time_init, date_time_end, status=SlotStatus.FREE):
         self.tenant_id = tenant_id
         self.user_id = user_id
         self.date_time_init = date_time_init
@@ -122,10 +122,10 @@ class Appointment(Base):
     service_id = Column("service_id", Integer, ForeignKey("services.id"), nullable=False)
     user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
     slot_id = Column("slot_id", Integer, ForeignKey("slots.id"), nullable=False)
-    status = Column("status", Enum(AppointmentStatus), default="pending") #(PENDING, CONFIRMED, COMPLETED, CANCELLED)
+    status = Column("status", Enum(AppointmentStatus), default=AppointmentStatus.PENDING) 
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, client_id, service_id, user_id, slot_id, status="pending"):
+    def __init__(self, tenant_id, client_id, service_id, user_id, slot_id, status=AppointmentStatus.PENDING):
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.service_id = service_id
@@ -134,13 +134,13 @@ class Appointment(Base):
         self.status = status
 
 class Weekdays(enum.Enum):
-    SUNDAY = "sunday"
     MONDAY = "monday"
     TUESDAY = "tuesday"
     WEDNESDAY = "wednesday"
     THURSDAY = "thursday"
     FRIDAY = "friday"
     SATURDAY = "saturday"
+    SUNDAY = "sunday"
 
 
 class WorkSchedule(Base):

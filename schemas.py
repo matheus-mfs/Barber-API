@@ -103,18 +103,24 @@ class ServiceEditSchema(BaseModel):
 #               WorkSchedule Schemas
 #-------------------------------------------------
 class WorkScheduleSchema(BaseModel):
-    weekday: Weekdays
-    work_start: time
-    work_end: time
-    lunch_start: time
-    lunch_end: time
+    work_start: Optional[time]
+    work_end: Optional[time]
+    lunch_start: Optional[time]
+    lunch_end: Optional[time]
     is_working: bool
     
 
     class config:
         from_attibutes = True  
     
+class WorkScheduleEditSchema(BaseModel):
+    work_start: Optional[time]
+    work_end: Optional[time]
+    lunch_start: Optional[time]
+    lunch_end: Optional[time]
 
+    class config:
+        from_attibutes = True  
 
 
 
