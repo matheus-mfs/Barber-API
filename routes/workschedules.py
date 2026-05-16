@@ -7,8 +7,6 @@ from schemas import WorkScheduleSchema, WorkScheduleEditSchema
 
 router = APIRouter(prefix="/workschedules", tags=["workschedules"])
 
-
-
 @router.post("/create")
 def create_works_chedules(weekday:Weekdays, work_schedule_schema:WorkScheduleSchema, current_user: User = Depends(check_token), session: Session = Depends(get_session)):
     
@@ -25,7 +23,6 @@ def create_works_chedules(weekday:Weekdays, work_schedule_schema:WorkScheduleSch
     session.commit()
 
     return {"mensagem":"Horario cadastrado"}
-
 
 @router.get("/list")
 def list_work_schedules(current_user: User = Depends(check_token), session: Session = Depends(get_session)):

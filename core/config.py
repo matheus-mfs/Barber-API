@@ -11,5 +11,6 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60)
     )
+    TIME_ZONE: str = os.getenv("TIME_ZONE")
 
 settings = Settings()

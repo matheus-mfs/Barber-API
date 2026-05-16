@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, time
 from decimal import Decimal
-from models import UserRole, Weekdays
+from models import UserRole
 
 
 #-------------------------------------------------
@@ -95,6 +95,14 @@ class ServiceEditSchema(BaseModel):
 #               Slot Schemas
 #-------------------------------------------------
 
+class SlotBlockSchema(BaseModel):
+    init_block: datetime
+    end_block: datetime
+
+    class config:
+        from_attibutes = True  
+
+
 #-------------------------------------------------
 #               Appointment Schemas
 #-------------------------------------------------
@@ -108,7 +116,6 @@ class WorkScheduleSchema(BaseModel):
     lunch_start: Optional[time]
     lunch_end: Optional[time]
     is_working: bool
-    
 
     class config:
         from_attibutes = True  
