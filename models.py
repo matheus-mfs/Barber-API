@@ -1,9 +1,18 @@
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, DateTime, Numeric, Time, Enum, UniqueConstraint
 from core.database import Base
 from datetime import timezone, datetime
 import enum
-
-
+from sqlalchemy import (
+    Column, 
+    String, 
+    Integer, 
+    Boolean, 
+    ForeignKey, 
+    DateTime, 
+    Numeric, 
+    Time, 
+    Enum, 
+    UniqueConstraint
+)
 
 class Tenant(Base):
     __tablename__ = "tenants"
@@ -168,6 +177,30 @@ class WorkSchedule(Base):
         self.lunch_end = lunch_end
         self.is_working = is_working
 
+'''
+class AppointmentSlot(Base):
+    __tablename__ = "appointment_slots"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
+    slot_id = Column(Integer, ForeignKey("slots.id"), nullable=False, unique=True)
+
+'''
+'''
+class Appointment(Base):
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    service_id = Column(Integer, ForeignKey("services.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    status = Column(Enum(AppointmentStatus), default=AppointmentStatus.PENDING)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+'''
         
 # iniciar o alembic: poetry run alembic init alembic
 

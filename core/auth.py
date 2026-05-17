@@ -10,7 +10,6 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from models import User
 
-
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_schema = OAuth2PasswordBearer(tokenUrl="auth/login-form")
 
@@ -41,3 +40,45 @@ def authenticate_user(email, password, tenant, session):
     elif not bcrypt_context.verify(password, user.password):
         return False
     return user
+
+def create_account_service(session, user_schema, current_tenant):
+
+    user = session.query(User).filter(User.email == user_schema.email, User.tenant_id == current_tenant.id).first()
+
+    if user:
+        raise HTTPException(status_code=400, detail="E-mail do usuario ja cadastrado")
+
+    password_encrypted = bcrypt_context.hash(user_schema.password)
+
+    new_user = User(current_tenant.id, user_schema.name, user_schema.email,
+                    password_encrypted, user_schema.role, user_schema.status)
+
+    session.add(new_user)
+    session.commit()
+
+    return new_user
+
+def login_service(email, password, tenant_id, session):
+
+    user = authenticate_user(email, password, tenant_id, session)
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Usuario nao encontrado ou credenciais invalidas")
+
+    access_token = create_token(user.id)
+    refresh_token = create_token(user.id, duration_token=timedelta(days=7))
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "Bearer"
+    }
+
+def refresh_token_service(user):
+
+    access_token = create_token(user.id)
+
+    return {
+        "access_token": access_token,
+        "token_type": "Bearer"
+    }

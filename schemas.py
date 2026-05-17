@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, time
 from decimal import Decimal
-from models import UserRole
+from models import UserRole, AppointmentStatus
 
 
 #-------------------------------------------------
@@ -106,6 +106,16 @@ class SlotBlockSchema(BaseModel):
 #-------------------------------------------------
 #               Appointment Schemas
 #-------------------------------------------------
+
+class AppointmentSchemas(BaseModel):
+    client_id: int
+    service_id: int
+    user_id: int
+    slot_id: int
+    status: Optional[AppointmentStatus] = AppointmentStatus.CONFIRMED
+
+    class config:
+        from_attibutes = True 
 
 #-------------------------------------------------
 #               WorkSchedule Schemas
