@@ -1,8 +1,11 @@
 from datetime import date, datetime, timedelta
+from sqlalchemy.orm import Session
 from core.config import settings
-from fastapi import HTTPException
-from models import Slot, WorkSchedule, SlotStatus, UserRole
+from core.database import get_session
+from fastapi import HTTPException, Depends
+from models import Slot, User, WorkSchedule, SlotStatus, UserRole, UserService
 from zoneinfo import ZoneInfo
+from math import ceil
 time_zone = ZoneInfo(settings.TIME_ZONE)
 
 
@@ -17,7 +20,7 @@ weekdays = {
 }
 
 
-def generate_user_slots(session, user):
+def generate_user_slots(session: Session, user:User):
 
     work_schedule = session.query(WorkSchedule).filter(WorkSchedule.user_id == user.id).all()
 
@@ -90,7 +93,7 @@ def get_user_slots(session, user_id):
 
 def get_user_free_slots(session, user_id):
 
-    slots = session.query(Slot).filter(Slot.user_id == user_id,Slot.status == SlotStatus.FREE).all()
+    slots = session.query(Slot).filter(Slot.user_id == user_id, Slot.status == SlotStatus.FREE).order_by(Slot.date_time_init).all()
     
     if not slots:
         raise HTTPException(status_code=404, detail="Sem horarios livres")
@@ -120,3 +123,64 @@ def block_slots(session, user_id, init_block, end_block):
         current_time += timedelta(minutes=15)
 
     session.commit()
+
+def get_available_start_times(service_id, user_id, session):
+
+    service = (session.query(UserService).filter(UserService.service_id == service_id, UserService.user_id == user_id).first())
+
+    if not service:
+        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+
+    required_slots = ceil(service.custom_duration / 15)
+    free_slots = get_user_free_slots(session, user_id)
+    max_index = len(free_slots) - required_slots + 1
+    available_times = []
+
+    for index in range(max_index):
+
+        start_time = free_slots[index].date_time_init
+        sequence_valid = True
+
+        for step in range(1, required_slots):
+
+            expected_time = start_time + timedelta(minutes=15 * step)
+            next_time = free_slots[index + step].date_time_init
+
+            if next_time != expected_time:
+                sequence_valid = False
+                break
+
+        if sequence_valid:
+            available_times.append(start_time)
+
+    return available_times
+
+    # service = session.query(UserService).filter(UserService.service_id==service_id, UserService.user_id==user_id).first()
+
+    # if not service:
+    #     raise HTTPException(status_code=404, detail="Nao encontrado")
+    
+    # amount_slots = ceil(service.custom_duration / 15)
+    # print(amount_slots)
+    # slots_free = get_user_free_slots(session, user_id)
+    # max_index = len(slots_free)-(amount_slots-1)  # evita index overflow ao verificar os próximos slots
+    # counter = 0
+    # time_free = []
+
+    # while counter < max_index:
+    #     index=counter
+    #     start_time = slots_free[index].date_time_init 
+    #     matching_slots = 0
+        
+    #     for aux in range(1,amount_slots):
+    #         if start_time == (slots_free[index+aux].date_time_init - timedelta(minutes=(15*aux))):
+    #             matching_slots+=1
+    #         if matching_slots==amount_slots-1:
+    #             print(start_time)
+    #             time_free.append(start_time)
+      
+    #     counter +=1
+    # return time_free
+
+        # if start_time == (slots_free[index+1].date_time_init - timedelta(minutes=15)) and start_time == (slots_free[index+2].date_time_init - timedelta(minutes=30)) :
+        #     print(start_time)

@@ -92,6 +92,26 @@ class ServiceEditSchema(BaseModel):
         from_attibutes = True  
 
 #-------------------------------------------------
+#               UserService Schemas
+#-------------------------------------------------
+
+class UserServiceSchema(BaseModel):
+    service_id: int
+    custom_duration: Optional[int] = None
+    custom_price: Optional[Decimal] = None
+
+    class config:
+        from_attibutes = True  
+
+
+class UserServiceEditSchema(BaseModel):
+    custom_duration: Optional[int] = None
+    custom_price: Optional[Decimal] = None
+
+    class config:
+        from_attibutes = True  
+
+#-------------------------------------------------
 #               Slot Schemas
 #-------------------------------------------------
 
@@ -109,9 +129,8 @@ class SlotBlockSchema(BaseModel):
 
 class AppointmentSchemas(BaseModel):
     client_id: int
-    service_id: int
-    user_id: int
-    slot_id: int
+    user_service_id: int
+    start_time: datetime
     status: Optional[AppointmentStatus] = AppointmentStatus.CONFIRMED
 
     class config:

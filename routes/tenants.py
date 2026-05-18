@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from core.auth import check_token
 from core.database import get_session
 from schemas import TenantSchema
-from models import User
+from models import User, Tenant
 from services.tenant_service import (
     create_tenant_service,
     get_tenant_by_id,
@@ -30,3 +30,4 @@ def edit_tenant(id_tenant: int, tenant_schema: TenantSchema, session: Session = 
     update_tenant_service(session=session, tenant_id=id_tenant, tenant_schema=tenant_schema, current_user=current_user)
 
     return {"mensagem":"Informacoes atualizadas"}
+

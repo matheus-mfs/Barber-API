@@ -35,3 +35,4 @@ def login_form(data_form: OAuth2PasswordRequestForm = Depends(), session: Sessio
 def user_refresh_token(user: User = Depends(check_token)):
 
     return refresh_token_service(user)
+

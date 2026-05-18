@@ -5,6 +5,7 @@ from core.database import get_session
 from core.dependencies import get_tenant
 from models import User, Tenant, Client, Service, Slot, Appointment, AppointmentStatus
 from schemas import AppointmentSchemas
+from services.appointment_service import (post_create_appointment)
 
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
@@ -12,10 +13,12 @@ router = APIRouter(prefix="/appointments", tags=["appointments"])
 @router.post("/create")
 def create_appointment(appointment_schemas: AppointmentSchemas, session: Session = Depends(get_session), 
                        current_tenant: Tenant = Depends(get_tenant)):
-    appointment = Appointment(current_tenant.id, appointment_schemas.client_id, appointment_schemas.service_id,
-                              appointment_schemas.user_id, appointment_schemas.slot_id, appointment_schemas.status)
-    return appointment_schemas
 
+    post_create_appointment(appointment_schemas, current_tenant.id, session)
+    return{
+        "mensagem":"Agendamento confirmado"
+    }
+    
 @router.get("/list")
 def list_appointment():
     # TODO: listar todos os agendamentos
@@ -24,11 +27,6 @@ def list_appointment():
 @router.get("/today")
 def today_appointment():
     # TODO: agenda do dia
-    pass
-
-@router.get("/client/{cliente_id}")
-def history_appointment(cliente_id: int):
-    # TODO: histórico do cliente
     pass
 
 @router.get("/{id}")

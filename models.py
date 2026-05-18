@@ -57,6 +57,41 @@ class User(Base):
         self.role = role
         self.status = status
 
+class Weekdays(enum.Enum):
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+
+
+class WorkSchedule(Base):
+    __tablename__ = "workschedules"
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "weekday", name="uq_user_weekday"),
+    )
+
+    id = Column("id", Integer, nullable=False, primary_key=True, autoincrement=True)
+    user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
+    weekday = Column("weekday", Enum(Weekdays))
+    work_start = Column("work_start", Time)
+    work_end = Column("work_end", Time)
+    lunch_start = Column("lunch_start", Time)
+    lunch_end = Column("lunch_end", Time)
+    is_working = Column("is_working", Boolean, default=True)
+
+    def __init__(self, user_id, weekday, work_start, work_end, lunch_start, lunch_end, is_working=True):
+        self.user_id = user_id
+        self.weekday = weekday
+        self.work_start = work_start
+        self.work_end = work_end
+        self.lunch_start = lunch_start
+        self.lunch_end = lunch_end
+        self.is_working = is_working
+
 class Client(Base):
     __tablename__ = "clients"
 
@@ -88,6 +123,30 @@ class Service(Base):
         self.duration = duration
         self.price = price
         self.status = status
+
+class UserService(Base):
+    __tablename__ = "user_services"
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "service_id", "user_id", name="uq_barber_service"),
+    )
+
+    id = Column("id", Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column("tenant_id", Integer,  ForeignKey("tenants.id"), nullable=False)
+    service_id = Column("service_id", Integer, ForeignKey("services.id"), nullable=False)
+    user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
+    custom_duration = Column("custom_duration", Integer)
+    custom_price = Column("custom_price", Numeric(10,2))
+    status = Column("status", Boolean, default=True)
+    created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+    def __init__(self, tenant_id, service_id, user_id, custom_duration, custom_price):
+        self.tenant_id = tenant_id
+        self.service_id = service_id
+        self.user_id = user_id
+        self.custom_duration = custom_duration
+        self.custom_price = custom_price
 
 class SlotStatus(enum.Enum):
     FREE = "free"
@@ -128,83 +187,38 @@ class Appointment(Base):
     id = Column("id", Integer, nullable=False, primary_key=True, autoincrement=True)
     tenant_id = Column("tenant_id", Integer,  ForeignKey("tenants.id"), nullable=False)
     client_id = Column("client_id", Integer, ForeignKey("clients.id"), nullable=False)
-    service_id = Column("service_id", Integer, ForeignKey("services.id"), nullable=False)
-    user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
-    slot_id = Column("slot_id", Integer, ForeignKey("slots.id"), nullable=False)
+    user_service_id = Column("user_service_id", Integer, ForeignKey("users.id"), nullable=False)
+    start_time = Column("start_time", DateTime, nullable=False)
+    end_time = Column("end_time", DateTime, nullable=False)
     status = Column("status", Enum(AppointmentStatus), default=AppointmentStatus.PENDING) 
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, client_id, service_id, user_id, slot_id, status=AppointmentStatus.PENDING):
+    def __init__(self, tenant_id, client_id, user_service_id, start_time, end_time, status=AppointmentStatus.PENDING):
         self.tenant_id = tenant_id
         self.client_id = client_id
-        self.service_id = service_id
-        self.user_id = user_id
-        self.slot_id = slot_id
+        self.user_service_id = user_service_id
+        self.start_time = start_time
+        self.end_time = end_time
         self.status = status
 
-class Weekdays(enum.Enum):
-    MONDAY = "monday"
-    TUESDAY = "tuesday"
-    WEDNESDAY = "wednesday"
-    THURSDAY = "thursday"
-    FRIDAY = "friday"
-    SATURDAY = "saturday"
-    SUNDAY = "sunday"
 
-
-class WorkSchedule(Base):
-    __tablename__ = "workschedules"
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "weekday", name="uq_user_weekday"),
-    )
-
-    id = Column("id", Integer, nullable=False, primary_key=True, autoincrement=True)
-    user_id = Column("user_id", Integer, ForeignKey("users.id"), nullable=False)
-    weekday = Column("weekday", Enum(Weekdays))
-    work_start = Column("work_start", Time)
-    work_end = Column("work_end", Time)
-    lunch_start = Column("lunch_start", Time)
-    lunch_end = Column("lunch_end", Time)
-    is_working = Column("is_working", Boolean, default=True)
-
-    def __init__(self, user_id, weekday, work_start, work_end, lunch_start, lunch_end, is_working=True):
-        self.user_id = user_id
-        self.weekday = weekday
-        self.work_start = work_start
-        self.work_end = work_end
-        self.lunch_start = lunch_start
-        self.lunch_end = lunch_end
-        self.is_working = is_working
-
-'''
 class AppointmentSlot(Base):
     __tablename__ = "appointment_slots"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
-    slot_id = Column(Integer, ForeignKey("slots.id"), nullable=False, unique=True)
+    id = Column("id", Integer, primary_key=True, autoincrement=True)
+    appointment_id = Column("appointment_id", Integer, ForeignKey("appointments.id"), nullable=False)
+    slot_id = Column("slot_id", Integer, ForeignKey("slots.id"), nullable=False, unique=True)
 
-'''
-'''
-class Appointment(Base):
-    __tablename__ = "appointments"
+    def __init__(self, appointment_id, slot_id):
+        self.appointment_id = appointment_id
+        self.slot_id = slot_id
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
 
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
-    service_id = Column(Integer, ForeignKey("services.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=False)
-    status = Column(Enum(AppointmentStatus), default=AppointmentStatus.PENDING)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-'''
-        
+ 
+
 # iniciar o alembic: poetry run alembic init alembic
 
-# criar a migração: poetry run alembic revision --autogenerate -m "menssagem"
+# criar a migração: poetry run alembic revision --autogenerate -m "add table UserService"
 
 # executar a migração: poetry run alembic upgrade head
 
