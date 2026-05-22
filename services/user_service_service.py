@@ -18,9 +18,10 @@ def post_create_barber_service(user_service_schema, current_user, session):
     user_service = UserService(current_user.tenant_id, service.id, current_user.id, user_service_schema.custom_duration, user_service_schema.custom_price)
     session.add(user_service)
     session.commit()
+    return user_service
 
-def get_list_barber_service(current_user, session):
-    user_service = session.query(UserService).filter(UserService.user_id == current_user.id).all()
+def get_list_barber_service(user_id, session):
+    user_service = session.query(UserService).filter(UserService.user_id == user_id).all()
     if not user_service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     return user_service
@@ -38,15 +39,18 @@ def put_edit_user_service(id_service, user_service_edit_schema, current_user, se
     user_service.custom_duration =  user_service_edit_schema.custom_duration
 
     session.commit()
+    return user_service
 
 def put_disable_user_service(id_service, current_user, session):
     user_service = get_id_user_service(id_service, current_user.id, session)
     user_service.status = False
 
     session.commit()
+    return user_service
 
 def put_active_user_service(id_service, current_user, session):
     user_service = get_id_user_service(id_service, current_user.id, session)
     user_service.status = True
 
     session.commit()
+    return user_service

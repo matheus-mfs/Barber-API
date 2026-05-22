@@ -40,6 +40,7 @@ def update_service(session, service_id, tenant_id, service_schema):
     service.price = service_schema.price
 
     session.commit()
+    return service
 
 def disable_service_by_id(session, service_id, tenant_id):
 
@@ -47,8 +48,12 @@ def disable_service_by_id(session, service_id, tenant_id):
     service.status = False
     session.commit()
 
+    return service
+
 def activate_service_by_id(session, service_id, tenant_id):
 
     service = get_service_by_id(session=session, service_id=service_id, tenant_id=tenant_id)
     service.status = True
     session.commit()
+
+    return service

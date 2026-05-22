@@ -157,6 +157,3 @@ class WorkScheduleEditSchema(BaseModel):
 
     class config:
         from_attibutes = True  
-
-
-

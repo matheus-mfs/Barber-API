@@ -1,5 +1,19 @@
 from fastapi import HTTPException
-from models import WorkSchedule
+from models import WorkSchedule, Slot, SlotStatus
+from datetime import date, datetime, timedelta
+from services.slot_service import generate_user_slots
+from services.slot_service import get_user_slots
+
+weekdays = {
+    0: "monday",
+    1: "tuesday",
+    2: "wednesday",
+    3: "thursday",
+    4: "friday",
+    5: "saturday",
+    6: "sunday"
+}
+
 
 def get_work_schedule_by_weekday(session, weekday, user_id):
 
@@ -44,19 +58,29 @@ def update_work_schedule_service(session, weekday, user_id, work_schedule_schema
     work_schedule.lunch_end = work_schedule_schema.lunch_end
 
     session.commit()
+    return work_schedule
 
 def block_weekday_service(session, weekday, user_id):
 
     work_schedule = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=user_id)
-
     work_schedule.is_working = False
+    
+    slots = get_user_slots(session, user_id)
+
+    for slot in slots:
+        date_slot = (slot.date_time_init.date())
+        weekday_slot = weekdays.get(date_slot.weekday())
+        if weekday_slot == weekday.value:
+            session.delete(slot)
 
     session.commit()
+    return work_schedule
 
-def active_weekday_service(session, weekday, user_id):
+def active_weekday_service(session, weekday, user):
 
-    work_schedule = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=user_id)
-
+    work_schedule = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=user.id)
     work_schedule.is_working = True
 
-    session.commit()
+    generate_user_slots(session, user)
+    return work_schedule
+

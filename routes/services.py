@@ -18,51 +18,41 @@ router = APIRouter(prefix="/services", tags=["services"])
 
 @router.post("/create")
 def create_service(service_schema: ServiceSchema, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
-
-    service = create_new_service(session=session,current_user=current_user,service_schema=service_schema)
-
+    
+    service = create_new_service(session, current_user, service_schema)
     return {
-            "message": f"Servico {service.name} criado com sucesso",
-            "service": service
+            "mensagem": f"Servico criado com sucesso",
+            "service": service.name,
+            "id_service":service.id
     }
 
 @router.get("/list")
 def list_service(session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
-
-    services = list_tenant_services(session=session, tenant_id=current_tenant.id)
-
-    return {
-            "services": services
-    }
+    
+    return list_tenant_services(session, current_tenant.id)
 
 @router.get("/search/{id_service}")
 def search_service(id_service: int, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
-
-    return get_service_by_id(session=session, service_id=id_service, tenant_id=current_tenant.id)
+    
+    return get_service_by_id(session, id_service, current_tenant.id)
 
 @router.put("/edit/{id_service}")
 def edit_service(id_service: int, service_schema: ServiceEditSchema, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
-
-    update_service(session=session, service_id=id_service, tenant_id=current_user.tenant_id, service_schema=service_schema)
-
-    return {
-            "message": "Dados atualizados"
-    }
-
+    
+    return update_service(session, id_service, current_user.tenant_id,  service_schema)
+     
 @router.put("/disable/{id_service}")
 def disable_service(id_service: int, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
-
-    disable_service_by_id(session=session, service_id=id_service, tenant_id=current_user.tenant_id)
-
+    
+    service = disable_service_by_id(session, id_service, current_user.tenant_id)
     return {
-            "message": "Servico desativado"
+            "status": service.status
     }
 
 @router.put("/active/{id_service}")
 def active_service(id_service: int, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
-
-    activate_service_by_id(session=session, service_id=id_service, tenant_id=current_user.tenant_id)
-
+    
+    service = activate_service_by_id(session, id_service, current_user.tenant_id)
     return {
-        "message": "Servico ativado"
+        "status": service.status
     }
