@@ -1,6 +1,7 @@
-from core.database import Base
+from app.core.database import Base
 from datetime import timezone, datetime
 import enum
+from sqlalchemy.orm import relationship
 from sqlalchemy import (
     Column, 
     String, 
@@ -48,6 +49,7 @@ class User(Base):
     role = Column("role", Enum(UserRole), default=UserRole.BARBER) # Barbeiro ou Admin
     status = Column("status", Boolean, default=True)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
+    tenant = relationship("Tenant")
 
     def __init__(self, tenant_id, name, email, password, role=UserRole.BARBER, status=True):
         self.tenant_id = tenant_id
