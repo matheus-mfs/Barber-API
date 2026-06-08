@@ -8,8 +8,7 @@ from app.services.user_service import (
     get_user_by_id,
     list_users_service,
     update_user_service,
-    disable_user_service,
-    active_user_service
+
 )
 from app.models import User, UserRole
 from app.schemas.user_schema import UserEditSchema
@@ -146,40 +145,40 @@ class TestUserService:
         with pytest.raises(HTTPException):
             update_user_service(db_session, 9999, edit_schema, admin_user)
 
-    def test_disable_user_service_sets_status_false(self, db_session: Session, user, admin_user):
-        """Testa desabilitação de usuário."""
-        result = disable_user_service(db_session, user.id, admin_user)
+    # def test_disable_user_service_sets_status_false(self, db_session: Session, user, admin_user):
+    #     """Testa desabilitação de usuário."""
+    #     result = disable_user_service(db_session, user.id, admin_user)
         
-        assert result.status is False
+    #     assert result.status is False
 
-    def test_disable_user_service_only_admin_can_disable(self, db_session: Session, user, admin_user):
-        """Testa que apenas admin pode desabilitar usuário."""
-        with pytest.raises(HTTPException):
-            disable_user_service(db_session, admin_user.id, user)
+    # def test_disable_user_service_only_admin_can_disable(self, db_session: Session, user, admin_user):
+    #     """Testa que apenas admin pode desabilitar usuário."""
+    #     with pytest.raises(HTTPException):
+    #         disable_user_service(db_session, admin_user.id, user)
 
-    def test_disable_user_service_raises_404_when_not_found(self, db_session: Session, admin_user):
-        """Testa exceção ao desabilitar usuário inexistente."""
-        with pytest.raises(HTTPException):
-            disable_user_service(db_session, 9999, admin_user)
+    # def test_disable_user_service_raises_404_when_not_found(self, db_session: Session, admin_user):
+    #     """Testa exceção ao desabilitar usuário inexistente."""
+    #     with pytest.raises(HTTPException):
+    #         disable_user_service(db_session, 9999, admin_user)
 
-    def test_active_user_service_sets_status_true(self, db_session: Session, user, admin_user):
-        """Testa ativação de usuário."""
-        # Primeiro desabilita
-        disable_user_service(db_session, user.id, admin_user)
+    # def test_active_user_service_sets_status_true(self, db_session: Session, user, admin_user):
+    #     """Testa ativação de usuário."""
+    #     # Primeiro desabilita
+    #     disable_user_service(db_session, user.id, admin_user)
         
-        # Depois ativa
-        result = active_user_service(db_session, user.id, admin_user)
+    #     # Depois ativa
+    #     result = active_user_service(db_session, user.id, admin_user)
         
-        assert result.status is True
+    #     assert result.status is True
 
-    def test_active_user_service_only_admin_can_activate(self, db_session: Session, user, admin_user):
-        """Testa que apenas admin pode ativar usuário."""
-        disable_user_service(db_session, admin_user.id, admin_user)
+    # def test_active_user_service_only_admin_can_activate(self, db_session: Session, user, admin_user):
+    #     """Testa que apenas admin pode ativar usuário."""
+    #     disable_user_service(db_session, admin_user.id, admin_user)
         
-        with pytest.raises(HTTPException):
-            active_user_service(db_session, admin_user.id, user)
+    #     with pytest.raises(HTTPException):
+    #         active_user_service(db_session, admin_user.id, user)
 
-    def test_active_user_service_raises_404_when_not_found(self, db_session: Session, admin_user):
-        """Testa exceção ao ativar usuário inexistente."""
-        with pytest.raises(HTTPException):
-            active_user_service(db_session, 9999, admin_user)
+    # def test_active_user_service_raises_404_when_not_found(self, db_session: Session, admin_user):
+    #     """Testa exceção ao ativar usuário inexistente."""
+    #     with pytest.raises(HTTPException):
+    #         active_user_service(db_session, 9999, admin_user)

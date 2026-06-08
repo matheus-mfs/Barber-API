@@ -4,6 +4,8 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models import User, UserRole
+from app.models.permission import PermissionRole
+from app.services.permission_service import check_permission_user
 
 
 def validate_admin(user_role: UserRole) -> None:
@@ -12,8 +14,6 @@ def validate_admin(user_role: UserRole) -> None:
     Args:
         user_role: Cargo do usuário
         
-    Raises:
-        HTTPException: Se o usuário não for admin
     """
     
     if user_role == UserRole.BARBER:
@@ -26,8 +26,6 @@ def validate_user_exists(user: Optional[User]) -> None:
     Args:
         user: Usuário para validar
         
-    Raises:
-        HTTPException: Se o usuário não existir
     """
     
     if not user:
@@ -45,8 +43,6 @@ def get_user_by_id(session: Session, user_id: int, tenant_id: int) -> User:
     Returns:
         User: Usuário encontrado
         
-    Raises:
-        HTTPException: Se o usuário não for encontrado
     """
     
     user: Optional[User] = session.query(User).filter(
@@ -65,9 +61,7 @@ def list_users_service(session: Session, tenant_id: int) -> List[User]:
         
     Returns:
         List[User]: Lista de usuários
-        
-    Raises:
-        HTTPException: Se nenhum usuário for encontrado
+ 
     """
     
     users: List[User] = session.query(User).filter(
@@ -77,7 +71,12 @@ def list_users_service(session: Session, tenant_id: int) -> List[User]:
     return users
 
 
-def update_user_service(session: Session, user_id: int, user_edit_schema: any, current_user: User) -> User:
+def update_user_service(
+        session: Session, 
+        user_edit_schema: any, 
+        current_user: User,
+        user_id: Optional[int] = None,
+) -> User:
     """Atualiza dados de um usuário.
     
     Args:
@@ -89,9 +88,15 @@ def update_user_service(session: Session, user_id: int, user_edit_schema: any, c
     Returns:
         User: Usuário atualizado
         
-    Raises:
-        HTTPException: Se o usuário não for encontrado ou sem permissão
     """
+    
+    user_id = check_permission_user(
+        user_id,
+        current_user,
+        session,
+        PermissionRole.MANAGE_OWN_USER,
+        PermissionRole.MANAGE_ALL_USERS
+    )
     
     user: Optional[User] = session.query(User).filter(User.id == user_id).first()
     validate_user_exists(user)
@@ -106,32 +111,7 @@ def update_user_service(session: Session, user_id: int, user_edit_schema: any, c
     return user
 
 
-def disable_user_service(session: Session, user_id: int, current_user: User) -> User:
-    """Desativa um usuário.
-    
-    Args:
-        session: Sessão do banco de dados
-        user_id: ID do usuário a desativar
-        current_user: Usuário autenticado (deve ser admin)
-        
-    Returns:
-        User: Usuário desativado
-        
-    Raises:
-        HTTPException: Se sem permissão ou usuário não encontrado
-    """
-   
-    validate_admin(current_user.role)
-    user: Optional[User] = session.query(User).filter(User.id == user_id).first()
-    validate_user_exists(user)
-
-    user.status = False
-    session.commit()
-
-    return user
-
-
-def active_user_service(session: Session, user_id: int, current_user: User) -> User:
+def status_user_service(session: Session, user_id: int, current_user: User) -> User:
     """Ativa um usuário.
     
     Args:
@@ -142,15 +122,17 @@ def active_user_service(session: Session, user_id: int, current_user: User) -> U
     Returns:
         User: Usuário ativado
         
-    Raises:
-        HTTPException: Se sem permissão ou usuário não encontrado
+
     """
-    
+
     validate_admin(current_user.role)
     user: Optional[User] = session.query(User).filter(User.id == user_id).first()
     validate_user_exists(user)
+    if user.status:
+        user.status = False
+    else:
+        user.status = True
 
-    user.status = True
     session.commit()
 
     return user

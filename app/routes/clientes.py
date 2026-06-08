@@ -1,3 +1,5 @@
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.auth import check_token
@@ -14,7 +16,11 @@ from app.services.client_service import (
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 @router.post("/")
-def create_client(client_schema: ClientSchema, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
+def create_client(
+    client_schema: ClientSchema, 
+    session: Session = Depends(get_session), 
+    current_tenant: Tenant = Depends(get_tenant)
+) -> Dict[str, Any]:
     """Cadastrar cliente"""
 
     client = create_new_client(session, current_tenant.id, client_schema)
@@ -26,7 +32,11 @@ def create_client(client_schema: ClientSchema, session: Session = Depends(get_se
         }
 
 @router.get("/list")
-def list_clients(current_tenant: Tenant = Depends(get_tenant), session: Session = Depends(get_session), current_user: User = Depends(check_token)):
+def list_clients(
+    current_tenant: Tenant = Depends(get_tenant), 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(check_token)
+) -> List[Dict[str, Any]]:
     """Listar clientes de um tenant"""
 
     clients = list_tenant_clients(session, current_tenant.id)
@@ -40,7 +50,12 @@ def list_clients(current_tenant: Tenant = Depends(get_tenant), session: Session 
         ]
 
 @router.get("/search/{id_client}")
-def search_clients(id_client: int, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant), current_user: User = Depends(check_token)):
+def search_clients(
+    id_client: int, 
+    session: Session = Depends(get_session), 
+    current_tenant: Tenant = Depends(get_tenant), 
+    current_user: User = Depends(check_token)
+)-> Dict[str, Any]:
     """Pesquisar clientes no tenant"""
     
     client = get_client_by_id(session, id_client, current_tenant.id)

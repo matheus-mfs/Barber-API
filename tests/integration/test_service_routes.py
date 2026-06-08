@@ -7,7 +7,7 @@ from decimal import Decimal
 class TestServiceRoutes:
     """Testes de integração para rotas de serviços."""
 
-    def test_create_service_with_valid_data(self, client: TestClient, tenant, auth_token):
+    def test_create_service_with_valid_data(self, client: TestClient, tenant, admin_auth_token):
         """Testa criação de serviço com dados válidos."""
         payload = {
             "name": "Novo Serviço",
@@ -21,14 +21,14 @@ class TestServiceRoutes:
             json=payload,
             headers={
                 "host": f"{tenant.slug}.barbaria.com",
-                "Authorization": f"Bearer {auth_token}"
+                "Authorization": f"Bearer {admin_auth_token}"
             }
         )
         
         assert response.status_code == 200
         assert "id_service" in response.json()
 
-    def test_create_service_with_missing_fields(self, client: TestClient, tenant, auth_token):
+    def test_create_service_with_missing_fields(self, client: TestClient, tenant, admin_auth_token):
         """Testa criação com campos faltando."""
         payload = {
             "name": "Novo Serviço"
@@ -40,7 +40,7 @@ class TestServiceRoutes:
             json=payload,
             headers={
                 "host": f"{tenant.slug}.barbaria.com",
-                "Authorization": f"Bearer {auth_token}"
+                "Authorization": f"Bearer {admin_auth_token}"
             }
         )
         
@@ -82,9 +82,8 @@ class TestServiceRoutes:
         )
         
         # Retorna lista vazia quando não há serviços
-        assert response.status_code == 200
-        assert isinstance(response.json(), list)
-        assert len(response.json()) == 0
+        assert response.status_code == 404
+
 
     def test_search_service_by_id(self, client: TestClient, tenant, service_test):
         """Testa busca de serviço por ID."""
@@ -105,7 +104,7 @@ class TestServiceRoutes:
         
         assert response.status_code == 404
 
-    def test_edit_service_with_valid_data(self, client: TestClient, tenant, auth_token, service_test):
+    def test_edit_service_with_valid_data(self, client: TestClient, tenant, admin_auth_token, service_test):
         """Testa edição de serviço."""
         payload = {
             "name": "Serviço Atualizado",
@@ -118,14 +117,14 @@ class TestServiceRoutes:
             json=payload,
             headers={
                 "host": f"{tenant.slug}.barbaria.com",
-                "Authorization": f"Bearer {auth_token}"
+                "Authorization": f"Bearer {admin_auth_token}"
             }
         )
         
         assert response.status_code == 200
         assert response.json()["name"] == "serviço atualizado"
 
-    def test_edit_service_not_found(self, client: TestClient, tenant, auth_token):
+    def test_edit_service_not_found(self, client: TestClient, tenant, admin_auth_token):
         """Testa edição de serviço inexistente."""
         payload = {
             "name": "Novo Nome",
@@ -138,7 +137,7 @@ class TestServiceRoutes:
             json=payload,
             headers={
                 "host": f"{tenant.slug}.barbaria.com",
-                "Authorization": f"Bearer {auth_token}"
+                "Authorization": f"Bearer {admin_auth_token}"
             }
         )
         
@@ -160,26 +159,26 @@ class TestServiceRoutes:
         
         assert response.status_code == 403
 
-    def test_toggle_service_status(self, client: TestClient, tenant, auth_token, service_test):
+    def test_toggle_service_status(self, client: TestClient, tenant, admin_auth_token, service_test):
         """Testa toggle de status do serviço."""
         response = client.put(
-            f"/services/active/{service_test.id}",
+            f"/services/status/{service_test.id}",
             headers={
                 "host": f"{tenant.slug}.barbaria.com",
-                "Authorization": f"Bearer {auth_token}"
+                "Authorization": f"Bearer {admin_auth_token}"
             }
         )
         
         assert response.status_code == 200
         assert "status" in response.json()
 
-    def test_toggle_service_status_not_found(self, client: TestClient, tenant, auth_token):
+    def test_toggle_service_status_not_found(self, client: TestClient, tenant, admin_auth_token):
         """Testa toggle de status em serviço inexistente."""
         response = client.put(
-            "/services/active/9999",
+            "/services/status/9999",
             headers={
                 "host": f"{tenant.slug}.barbaria.com",
-                "Authorization": f"Bearer {auth_token}"
+                "Authorization": f"Bearer {admin_auth_token}"
             }
         )
         

@@ -1,9 +1,10 @@
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.auth import check_token
 from app.core.database import get_session
 from app.core.dependencies import get_tenant
-from app.models import User, Tenant
+from app.models import User, Tenant, PermissionRole
 from app.schemas.appointment_schema import AppointmentSchemas
 from app.services.appointment_service import (
     post_create_appointment,
@@ -15,36 +16,96 @@ from app.services.appointment_service import (
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
-@router.post("/create", status_code=201)
-def create_appointment(appointment_schemas: AppointmentSchemas, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
+@router.post("/create")
+def create_appointment(
+    appointment_schemas: AppointmentSchemas, 
+    session: Session = Depends(get_session), 
+    current_tenant: Tenant = Depends(get_tenant)
+):
 
     appointment = post_create_appointment(appointment_schemas, current_tenant.id, session)
     return{
             "id": appointment.id,
-            "status": appointment.status
+            "status": appointment.status,
+            "client": appointment.client_id,
+            "tenant": appointment.tenant_id,
+            "service": appointment.user_service_id,
+            "start_time": appointment.start_time,
+            "end_time": appointment.end_time
     }
     
 @router.get("/list")
-def list_appointment(current_user:User = Depends(check_token), session:Session = Depends(get_session)):
+def list_appointment(
+    user_id: Optional[int] = None,
+    current_user:User = Depends(check_token), 
+    session:Session = Depends(get_session)
+) -> List[dict[str, Any]]:
     
-    return get_list_appointment(current_user.id, session)
-    
+    appointments = get_list_appointment(current_user, session, user_id)
+    return[
+            {
+            "id": appointment.id,
+            "status": appointment.status,
+            "client": appointment.client_id,
+            "tenant": appointment.tenant_id,
+            "service": appointment.user_service_id,
+            "start_time": appointment.start_time,
+            "end_time": appointment.end_time
+            }for appointment in appointments   
+    ]
+
 @router.get("/today")
-def today_appointment(current_user:User = Depends(check_token), session:Session = Depends(get_session)):
+def today_appointment(
+    user_id: Optional[int] = None,
+    current_user:User = Depends(check_token), 
+    session:Session = Depends(get_session)
+) -> List[dict[str, Any]]:
     
-    return get_today_appointment(current_user.id, session)
+    appointments = get_today_appointment(current_user, session, user_id)
+    return[
+            {
+            "id": appointment.id,
+            "status": appointment.status,
+            "client": appointment.client_id,
+            "tenant": appointment.tenant_id,
+            "service": appointment.user_service_id,
+            "start_time": appointment.start_time,
+            "end_time": appointment.end_time
+            }for appointment in appointments   
+    ]
 
 @router.get("/{id_appointment}")
-def search_appointment(id_appointment:int, current_user:User = Depends(check_token), session:Session = Depends(get_session)):
+def search_appointment(
+    id_appointment:int,
+    current_user:User = Depends(check_token),
+    session:Session = Depends(get_session)
+) -> dict[str, Any]:
     
-    return get_search_appointment_id(id_appointment, session)
-
-@router.put("/cancel/{id_appointment}")
-def cancel_appointment(id_appointment:int, current_user:User = Depends(check_token), session:Session = Depends(get_session)):
-    
-    appointment = put_cancel_appointment(id_appointment, session)
+    appointment = get_search_appointment_id(id_appointment, session, current_user)
     return{
             "id": appointment.id,
-            "status": appointment.status
+            "status": appointment.status,
+            "client": appointment.client_id,
+            "tenant": appointment.tenant_id,
+            "service": appointment.user_service_id,
+            "start_time": appointment.start_time,
+            "end_time": appointment.end_time
     }
+
+@router.put("/cancel/{id_appointment}")
+def cancel_appointment(
+    id_appointment:int, 
+    current_user:User = Depends(check_token),
+    session:Session = Depends(get_session)
+) -> dict[str, Any]:
     
+    appointment = put_cancel_appointment(id_appointment, session, current_user)
+    return{
+            "id": appointment.id,
+            "status": appointment.status,
+            "client": appointment.client_id,
+            "tenant": appointment.tenant_id,
+            "service": appointment.user_service_id,
+            "start_time": appointment.start_time,
+            "end_time": appointment.end_time
+    }

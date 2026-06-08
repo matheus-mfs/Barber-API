@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta, timezone
 
-
 @pytest.mark.integration
 class TestAppointmentRoutes:
     """Testes de integração para rotas de agendamentos."""
@@ -38,7 +37,7 @@ class TestAppointmentRoutes:
             headers={"host": f"{tenant.slug}.barbaria.com"}
         )
         
-        assert response.status_code == 201
+        assert response.status_code == 200
         assert "id" in response.json()
         assert response.json()["status"] == "pending"
 

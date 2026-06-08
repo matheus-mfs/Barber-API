@@ -1,10 +1,15 @@
+from typing import Any, Dict
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.core.dependencies import permission_required
 from app.core.auth import check_token
 from app.core.database import get_session
 from app.core.dependencies import get_tenant
 from app.schemas.service_schema import ServiceSchema, ServiceEditSchema
-from app.models import User, Tenant
+from app.models.user import User
+from app.models.permission import PermissionRole
+from app.models.tenant import Tenant
 from app.services.service_service import (
     create_new_service,
     list_tenant_services,
@@ -16,7 +21,11 @@ from app.services.service_service import (
 router = APIRouter(prefix="/services", tags=["services"])
 
 @router.post("/create")
-def create_service(service_schema: ServiceSchema, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
+def create_service(
+    service_schema: ServiceSchema, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
+)-> Dict[str, Any]:
     
     service = create_new_service(session, current_user, service_schema)
     return {
@@ -26,9 +35,12 @@ def create_service(service_schema: ServiceSchema, session: Session = Depends(get
     }
 
 @router.get("/list")
-def list_service(session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
+def list_service(
+    session: Session = Depends(get_session), 
+    current_tenant: Tenant = Depends(get_tenant)
+)-> list[Dict[str, Any]]:
     
-    services = list_tenant_services(session, current_tenant.id)
+    services = list_tenant_services(session, current_tenant)
     return [
             {"id": s.id, 
              "name": s.name, 
@@ -40,7 +52,11 @@ def list_service(session: Session = Depends(get_session), current_tenant: Tenant
         ]
 
 @router.get("/search/{id_service}")
-def search_service(id_service: int, session: Session = Depends(get_session), current_tenant: Tenant = Depends(get_tenant)):
+def search_service(
+    id_service: int, 
+    session: Session = Depends(get_session), 
+    current_tenant: Tenant = Depends(get_tenant)
+)-> Dict[str, Any]:
     
     s = get_service_by_id(session, id_service, current_tenant.id)
     return {
@@ -53,7 +69,12 @@ def search_service(id_service: int, session: Session = Depends(get_session), cur
         }
 
 @router.put("/edit/{id_service}")
-def edit_service(id_service: int, service_schema: ServiceEditSchema, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
+def edit_service(
+    id_service: int, 
+    service_schema: ServiceEditSchema, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
+)-> Dict[str, Any]:
     
     s = update_service(session, id_service, current_user.tenant_id,  service_schema)
     return {
@@ -66,8 +87,12 @@ def edit_service(id_service: int, service_schema: ServiceEditSchema, session: Se
         }
      
 
-@router.put("/active/{id_service}")
-def status_service(id_service: int, session: Session = Depends(get_session), current_user: User = Depends(check_token)):
+@router.put("/status/{id_service}")
+def status_service(
+    id_service: int, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
+)-> Dict[str, Any]:
     
     service = status_service_by_id(session, id_service, current_user.tenant_id)
     return {

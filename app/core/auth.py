@@ -7,7 +7,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from app.models import User
+from app.models import User, UserRole
+from app.services.permission_service import assign_barber_permissions, assign_owner_permissions
 from .config import settings
 from .database import get_session
 
@@ -28,8 +29,7 @@ def check_token(
     Returns:
         User: Usuário autenticado
         
-    Raises:
-        HTTPException: Se o token for inválido ou o usuário não existir
+
     """
     try:
         payload: Dict[str, Any] = jwt.decode(
@@ -96,7 +96,10 @@ def authenticate_user(
 def create_account_service(
     session: Session, user_schema: Any, current_tenant: Any
 ) -> User:
-    """Cria uma nova conta de usuário.
+    """Cria uma nova conta de usuário com permissões padrão.
+    
+    Ao criar um novo usuário, suas permissões são atribuídas automaticamente
+    baseado no seu role (BARBER ou OWNER).
     
     Args:
         session: Sessão do banco de dados
@@ -104,10 +107,10 @@ def create_account_service(
         current_tenant: Tenant atual
         
     Returns:
-        User: Usuário criado
+        User: Usuário criado com permissões atribuídas
         
     Raises:
-        HTTPException: Se o email já está cadastrado
+        HTTPException: Se email já existe ou se houver erro ao atribuir permissões
     """
     existing_user: Optional[User] = session.query(User).filter(
         User.email == user_schema.email,
@@ -131,6 +134,12 @@ def create_account_service(
 
     session.add(new_user)
     session.commit()
+    
+    # Atribui permissões padrão baseado no role
+    if new_user.role == UserRole.BARBER:
+        assign_barber_permissions(new_user, session)
+    elif new_user.role == UserRole.OWNER:
+        assign_owner_permissions(new_user, session)
 
     return new_user
 
@@ -147,9 +156,6 @@ def login_service(
         
     Returns:
         Dict[str, str]: Dicionário com access_token, refresh_token e token_type
-        
-    Raises:
-        HTTPException: Se as credenciais forem inválidas
     """
     user: Optional[User] = authenticate_user(email, password, tenant_id, session)
 
@@ -185,3 +191,17 @@ def refresh_token_service(user: User) -> Dict[str, str]:
         "access_token": access_token,
         "token_type": "Bearer"
     }
+
+def put_reset_password(new_password: str, current_user: User, session: Session):
+    """Renova o token de acesso do usuário.
+    
+    Args:
+        new_password: Nova senha do usuario
+        user: Usuário autenticado
+        session: Sessão do banco de dados
+    """
+
+    hashed_password: str = bcrypt_context.hash(new_password)
+    current_user.password = hashed_password
+    session.commit()
+    

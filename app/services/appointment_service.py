@@ -1,27 +1,33 @@
 from datetime import datetime, timedelta
 from math import ceil
 from typing import Any, List, Optional
-
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from zoneinfo import ZoneInfo
-
 from app.core.config import settings
+from app.core.dependencies import permission_required
 from app.models import (
     Appointment,
     AppointmentSlot,
     AppointmentStatus,
     Slot,
     SlotStatus,
-    User,
     UserService,
 )
+from app.models.permission import PermissionRole
+from app.models.user import User
+from app.schemas.appointment_schema import AppointmentSchemas
+from app.services.permission_service import check_permission_user
 
 time_zone: ZoneInfo = ZoneInfo(settings.TIME_ZONE)
 
 
-def post_create_appointment(appointment_schemas: Any, tenant_id: int, session: Session) -> Appointment:
+def post_create_appointment(
+        appointment_schemas: AppointmentSchemas, 
+        tenant_id: int, 
+        session: Session
+) -> Appointment:
     """Cria um novo agendamento e marca os slots como reservados.
     
     Args:
@@ -32,13 +38,11 @@ def post_create_appointment(appointment_schemas: Any, tenant_id: int, session: S
     Returns:
         Appointment: Agendamento criado
         
-    Raises:
-        HTTPException: Se o serviço ou slots não forem encontrados
     """
     
     user_service: Optional[UserService] = session.query(UserService).filter(
-        UserService.id == appointment_schemas.user_service_id
-    ).first()
+        UserService.id == appointment_schemas.user_service_id).first()
+    
     if not user_service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     
@@ -53,6 +57,7 @@ def post_create_appointment(appointment_schemas: Any, tenant_id: int, session: S
         appointment_schemas.start_time,
         end_time,
         appointment_schemas.status,
+        
     )
     
     session.add(appointment)
@@ -84,7 +89,11 @@ def post_create_appointment(appointment_schemas: Any, tenant_id: int, session: S
     
     return appointment
 
-def get_list_appointment(user_id: int, session: Session) -> List[Appointment]:
+def get_list_appointment(
+        current_user: User, 
+        session: Session, 
+        user_id: Optional[int] = None
+) -> List[Appointment]:
     """Lista todos os agendamentos de um barbeiro.
     
     Args:
@@ -94,12 +103,17 @@ def get_list_appointment(user_id: int, session: Session) -> List[Appointment]:
     Returns:
         List[Appointment]: Lista de agendamentos
         
-    Raises:
-        HTTPException: Se nenhum agendamento for encontrado
     """
     
-    appointments: List[Appointment] = (
-        session.query(Appointment)
+    user_id = check_permission_user(
+        user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_APPOINTMENTS, 
+        PermissionRole.MANAGE_ALL_APPOINTMENTS
+    )
+
+    appointments: List[Appointment] = (session.query(Appointment)
         .join(UserService, Appointment.user_service_id == UserService.id)
         .filter(UserService.user_id == user_id)
         .all()
@@ -110,8 +124,11 @@ def get_list_appointment(user_id: int, session: Session) -> List[Appointment]:
     
     return appointments
 
-
-def get_today_appointment(user_id: int, session: Session) -> List[Appointment]:
+def get_today_appointment(
+        current_user: User, 
+        session: Session, 
+        user_id: Optional[int] = None
+) -> List[Appointment]:
     """Lista agendamentos de hoje de um barbeiro.
     
     Args:
@@ -121,10 +138,16 @@ def get_today_appointment(user_id: int, session: Session) -> List[Appointment]:
     Returns:
         List[Appointment]: Lista de agendamentos de hoje
         
-    Raises:
-        HTTPException: Se nenhum agendamento for encontrado
     """
     
+    user_id = check_permission_user(
+        user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_APPOINTMENTS, 
+        PermissionRole.MANAGE_ALL_APPOINTMENTS
+    )
+
     today: Any = datetime.now(time_zone).date()
     
     appointments: List[Appointment] = (
@@ -132,8 +155,7 @@ def get_today_appointment(user_id: int, session: Session) -> List[Appointment]:
         .join(UserService, Appointment.user_service_id == UserService.id)
         .filter(
             UserService.user_id == user_id,
-            func.date(Appointment.start_time) == today,
-        ).all()
+            func.date(Appointment.start_time) == today).all()
     )
 
     if not appointments:
@@ -141,8 +163,11 @@ def get_today_appointment(user_id: int, session: Session) -> List[Appointment]:
     
     return appointments
 
-
-def get_search_appointment_id(appointment_id: int, session: Session) -> Appointment:
+def get_search_appointment_id(
+        appointment_id: int, 
+        session: Session,
+        current_user: User
+) -> Appointment:
     """Busca um agendamento específico.
     
     Args:
@@ -152,12 +177,11 @@ def get_search_appointment_id(appointment_id: int, session: Session) -> Appointm
     Returns:
         Appointment: Agendamento encontrado
         
-    Raises:
-        HTTPException: Se o agendamento não for encontrado
     """
-    
+
     appointment = session.query(Appointment).filter(
-        Appointment.id == appointment_id
+        Appointment.id == appointment_id,
+        Appointment.tenant_id == current_user.tenant_id
     ).first()
     
     if not appointment:
@@ -165,8 +189,11 @@ def get_search_appointment_id(appointment_id: int, session: Session) -> Appointm
     
     return appointment
 
-
-def put_cancel_appointment(appointment_id: int, session: Session) -> Appointment:
+def put_cancel_appointment(
+        appointment_id: int, 
+        session: Session, 
+        current_user: User
+) -> Appointment:
     """Cancela um agendamento.
     
     Args:
@@ -175,18 +202,20 @@ def put_cancel_appointment(appointment_id: int, session: Session) -> Appointment
         
     Returns:
         Appointment: Agendamento cancelado
-        
-    Raises:
-        HTTPException: Se o agendamento não for encontrado
+
     """
+    
     appointment = session.query(Appointment).filter(
-        Appointment.id == appointment_id
+        Appointment.id == appointment_id,
+        Appointment.tenant_id == current_user.tenant_id
     ).first()
     
     if not appointment:
         raise HTTPException(status_code=404, detail="Nada encontrado")
     
     appointment.status = AppointmentStatus.CANCELLED
-    session.commit()
+
     
+    session.commit()
+
     return appointment

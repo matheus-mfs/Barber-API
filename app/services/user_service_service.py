@@ -1,28 +1,44 @@
-from typing import List
+from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models import Service, User, UserService
+from app.models.permission import PermissionRole
+from app.models.tenant import Tenant
 from app.schemas.user_service_schema import UserServiceEditSchema, UserServiceSchema
+from app.services.permission_service import check_permission_user
 
-def post_create_barber_service(user_service_schema:UserServiceSchema, current_user: User, session:Session) -> UserService:
-    """Create a new barber service for a user.
+def post_add_barber_service(
+        user_service_schema:UserServiceSchema, 
+        current_user: User, 
+        session:Session,
+) -> UserService:
+    """Adicionar um novo serviço de barbearia para um usuário.
 
     Args:
-        user_service_schema (UserServiceSchema): The schema of the user service to create.
-        current_user (User): The current authenticated user.
-        session (Session): The database session.
+        user_service_schema (UserServiceSchema): O schema para criar user service.
+        current_user (User): Usuário autenticado.
+        session (Session): Sessão do banco de dados.
 
     Returns:
-        UserService: The created user service instance.
-
-    Raises:
-        HTTPException: If the service is already registered for the user or if the service is not found.
+        UserService: O user service criado
     """
     
-    if (session.query(UserService).filter(UserService.service_id == user_service_schema.service_id).first()):
+    user_id = check_permission_user(
+        user_service_schema.user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_USER_SERVICES, 
+        PermissionRole.MANAGE_ALL_USER_SERVICES
+    )
+
+    if (session.query(UserService).filter(UserService.service_id == user_service_schema.service_id, UserService.user_id==user_id).first()):
         raise HTTPException(status_code=403, detail="Serviço ja cadastrado para o usuario")
 
-    service = session.query(Service).filter(Service.id==user_service_schema.service_id, Service.tenant_id==current_user.tenant_id).first()
+    service = (session.query(Service)
+               .filter(Service.id==user_service_schema.service_id, 
+                       Service.tenant_id==current_user.tenant_id).first()
+    )
+    
     if not service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     
@@ -31,103 +47,129 @@ def post_create_barber_service(user_service_schema:UserServiceSchema, current_us
     if user_service_schema.custom_duration is None:
         user_service_schema.custom_duration = service.duration
 
-    user_service = UserService(current_user.tenant_id, service.id, current_user.id, user_service_schema.custom_duration, user_service_schema.custom_price)
+    user_service = UserService(
+        current_user.tenant_id, 
+        service.id, 
+        user_id, 
+        user_service_schema.custom_duration, 
+        user_service_schema.custom_price
+    )
+
     session.add(user_service)
     session.commit()
     return user_service
 
-def get_list_barber_service(user_id: int, session:Session) -> List[UserService]:
-    """Retrieve a list of all barber services for a user.
+def get_list_barber_service(user_id: int, session:Session, current_tenant: Tenant) -> List[UserService]:
+    """Retorna uma lista de todos os serviços de barbearia disponíveis para um usuário.
 
     Args:
-        user_id (int): The ID of the user.
-        session (Session): The database session.
+        user_id (int): O id do usuario.
+        session (Session): Sessão do banco de dados.
 
     Returns:
-        List[UserService]: A list of user service instances.
+        List[UserService]: Uma lista de User service.
 
-    Raises:
-        HTTPException: If no services are found for the user.
     """
 
-    user_service = session.query(UserService).filter(UserService.user_id == user_id).all()
+    user_service = (
+        session.query(UserService)
+        .filter(UserService.user_id == user_id, 
+                UserService.tenant_id==current_tenant.id).all()
+    )
+
     if not user_service:
-        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+        raise HTTPException(status_code=404, detail="Sem serviços no catalogo")
     return user_service
 
-def get_id_user_service(id_service: int, user_id: int, session: Session) -> UserService:
-    """Retrieve a specific barber service for a user.
+def get_id_user_service(id_service: int, user_id: int, tenant_id: int, session: Session) -> UserService:
+    """Retorna um serviço de barbearia específico para um usuário.
 
     Args:
-        id_service (int): The ID of the service.
-        user_id (int): The ID of the user.
-        session (Session): The database session.
+        id_service (int): O id do servico.
+        user_id (int): O id do usuario.
+        session (Session): Sessão do banco de dados
 
     Returns:
-        UserService: A user service instance.
+        UserService: User service encontrado
 
-    Raises:
-        HTTPException: If the service is not found.
     """
 
-    user_service = session.query(UserService).filter(UserService.service_id==id_service, UserService.user_id==user_id).first()
+    user_service = (
+        session.query(UserService)
+        .filter(UserService.service_id==id_service, 
+                UserService.user_id==user_id, 
+                UserService.tenant_id==tenant_id).first()
+    )
+
     if not user_service:
-        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+        raise HTTPException(status_code=404, detail="Serviço não encontrado no catalogo")
     return user_service
 
-def put_edit_user_service(id_service: int, user_service_edit_schema: UserServiceEditSchema, current_user: User, session: Session) -> UserService:
-    """Edit an existing barber service for a user.
+def put_edit_user_service(
+        user_service_edit_schema: UserServiceEditSchema, 
+        current_user:User,
+        session: Session,
+) -> UserService:
+    """Editar um serviço de barbearia existente para um usuário.
 
     Args:
-        id_service (int): The ID of the service.
-        user_service_edit_schema (UserServiceEditSchema): The schema of the edited user service.
-        current_user (User): The current authenticated user.
-        session (Session): The database session.
+        id_service (int): O id do servico.
+        user_service_edit_schema (UserServiceEditSchema): O schema para editar user service.
+        current_user (User): Usuário autenticado
+        session (Session): Sessão do banco de dados
 
     Returns:
-        UserService: The updated user service instance.
+        UserService: User service atualizado.
     """
 
-    user_service = get_id_user_service(id_service, current_user.id, session)
+    user_id = check_permission_user(
+        user_service_edit_schema.user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_USER_SERVICES, 
+        PermissionRole.MANAGE_ALL_USER_SERVICES
+    )
 
-    user_service.custom_price = user_service_edit_schema.custom_price
-    user_service.custom_duration =  user_service_edit_schema.custom_duration
+    user_service = get_id_user_service(user_service_edit_schema.service_id, user_id, current_user.tenant_id, session)
+    if not user_service_edit_schema.custom_price is None:
+        user_service.custom_price = user_service_edit_schema.custom_price
+    if not user_service_edit_schema.custom_duration is None:
+        user_service.custom_duration =  user_service_edit_schema.custom_duration
 
     session.commit()
     return user_service
 
-def put_disable_user_service(id_service: int, current_user: User, session: Session) -> UserService:
-    """Disable an existing barber service for a user.
+def put_status_user_service(
+        id_service: int, 
+        current_user: User, 
+        session: Session,
+        user_id: Optional[int] = None,
+) -> UserService:
+    """Ativar/Desativar um user service para um usuario.
 
     Args:
-        id_service (int): The ID of the service.
-        current_user (User): The current authenticated user.
-        session (Session): The database session.
+        id_service (int): O id do servico.
+        current_user (User): Usuário autenticado
+        session (Session): Sessão do banco de dados
 
     Returns:
-        UserService: The updated user service instance.
+        UserService: User service ativado ou desativado.
     """
 
-    user_service = get_id_user_service(id_service, current_user.id, session)
-    user_service.status = False
+    user_id = check_permission_user(
+        user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_USER_SERVICES, 
+        PermissionRole.MANAGE_ALL_USER_SERVICES
+    )
 
-    session.commit()
-    return user_service
-
-def put_active_user_service(id_service: int, current_user: User, session: Session) -> UserService:
-    """Enable an existing barber service for a user.
-
-    Args:
-        id_service (int): The ID of the service.
-        current_user (User): The current authenticated user.
-        session (Session): The database session.
-
-    Returns:
-        UserService: The updated user service instance.
-    """
-
-    user_service = get_id_user_service(id_service, current_user.id, session)
-    user_service.status = True
+    user_service = get_id_user_service(id_service, user_id, current_user.tenant_id, session)
+    
+    if user_service.status:
+        user_service.status = False
+    else:
+        user_service.status = True
 
     session.commit()
     return user_service

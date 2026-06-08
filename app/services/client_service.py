@@ -51,8 +51,6 @@ def list_tenant_clients(session: Session, tenant_id: int) -> List[Client]:
     Returns:
         List[Client]: Lista de clientes
         
-    Raises:
-        HTTPException: Se nenhum cliente for encontrado
     """
     
     clients: List[Client] = session.query(Client).filter(
@@ -75,9 +73,7 @@ def get_client_by_id(session: Session, client_id: int, tenant_id: int) -> Client
         
     Returns:
         Client: Cliente encontrado
-        
-    Raises:
-        HTTPException: Se o cliente não for encontrado
+   
     """
     
     client: Optional[Client] = session.query(Client).filter(

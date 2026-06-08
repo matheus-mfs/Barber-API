@@ -1,25 +1,29 @@
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.auth import check_token
 from app.core.database import get_session
 from app.models import User, Weekdays
-from app.schemas.work_schedule import WorkScheduleSchema, WorkScheduleEditSchema
+from app.schemas.work_schedule import WorkScheduleSchema, WorkScheduleEditSchema, WorkScheduleStatusSchema
 from app.services.work_schedule_service import (
     create_work_schedule_service,
     list_work_schedules_service,
     get_work_schedule_by_weekday,
     update_work_schedule_service,
-    block_weekday_service,
-    active_weekday_service
+    status_weekday_service
 )
 
 router = APIRouter(prefix="/workschedules",tags=["workschedules"])
 
 @router.post("/create")
-def create_work_schedule(weekday: Weekdays, work_schedule_schema: WorkScheduleSchema, 
-                         current_user: User = Depends(check_token),session: Session = Depends(get_session)):
-
-    ws = create_work_schedule_service(session=session, current_user=current_user, weekday=weekday, work_schedule_schema=work_schedule_schema)
+def create_work_schedule(
+    work_schedule_schema: WorkScheduleSchema, 
+    current_user: User = Depends(check_token),
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    print("oi")
+    ws = create_work_schedule_service(session, current_user, work_schedule_schema)
     return {
         "id": ws.id,
         "user_id": ws.user_id,
@@ -31,10 +35,13 @@ def create_work_schedule(weekday: Weekdays, work_schedule_schema: WorkScheduleSc
         "is_working": ws.is_working
     }
 
-@router.get("/list")
-def list_work_schedules(current_user: User = Depends(check_token), session: Session = Depends(get_session)):
+@router.get("/list/{user_id}")
+def list_work_schedules(
+    user_id: int,
+    session: Session = Depends(get_session)
+) -> List[Dict[str, Any]]:
     
-    schedules = list_work_schedules_service(session=session, user_id=current_user.id)
+    schedules = list_work_schedules_service(session, user_id)
     return [{
         "id": ws.id,
         "user_id": ws.user_id,
@@ -46,10 +53,14 @@ def list_work_schedules(current_user: User = Depends(check_token), session: Sess
         "is_working": ws.is_working
     } for ws in schedules]
 
-@router.get("/search/{weekday}")
-def search_work_schedule(weekday: Weekdays, current_user: User = Depends(check_token), session: Session = Depends(get_session)):
+@router.get("/search/{weekday}/user/{user_id}")
+def search_work_schedule(
+    weekday: Weekdays, 
+    user_id: int ,
+    session: Session = Depends(get_session)
+):
     
-    ws = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=current_user.id)
+    ws = get_work_schedule_by_weekday(session, weekday, user_id)
     return {
         "id": ws.id,
         "user_id": ws.user_id,
@@ -61,12 +72,14 @@ def search_work_schedule(weekday: Weekdays, current_user: User = Depends(check_t
         "is_working": ws.is_working
     }
 
-@router.put("/edit/{weekday}")
-def edit_work_schedule(weekday: Weekdays, work_schedule_schema: WorkScheduleEditSchema, 
-                       current_user: User = Depends(check_token), session: Session = Depends(get_session)):
+@router.put("/edit/")
+def edit_work_schedule(
+    work_schedule_schema: WorkScheduleEditSchema, 
+    current_user: User = Depends(check_token), 
+    session: Session = Depends(get_session)
+):
     
-    ws = update_work_schedule_service(session=session, weekday=weekday, 
-                                 user_id=current_user.id, work_schedule_schema=work_schedule_schema)
+    ws = update_work_schedule_service(session, current_user, work_schedule_schema)
     return {
         "id": ws.id,
         "user_id": ws.user_id,
@@ -78,22 +91,15 @@ def edit_work_schedule(weekday: Weekdays, work_schedule_schema: WorkScheduleEdit
         "is_working": ws.is_working
     }
 
-@router.put("/block/{weekday}")
-def block_weekday(weekday: Weekdays, current_user: User = Depends(check_token), session: Session = Depends(get_session)):
+@router.put("/status/")
+def status_weekday(
+    work_schedule_status_schema: WorkScheduleStatusSchema,
+    current_user: User = Depends(check_token), 
+    session: Session = Depends(get_session)
+):
     
-    work_schedule = block_weekday_service(session=session, weekday=weekday, user_id=current_user.id)
+    work_schedule = status_weekday_service(session, current_user, work_schedule_status_schema)
     return {
         "weekday": work_schedule.weekday,
         "is_working": work_schedule.is_working,
-        "status": work_schedule.is_working
-    }
-
-@router.put("/active/{weekday}")
-def active_weekday(weekday: Weekdays, current_user: User = Depends(check_token), session: Session = Depends(get_session)):
-    
-    work_schedule = active_weekday_service(session, weekday, current_user)
-    return {
-        "weekday": work_schedule.weekday,
-        "is_working": work_schedule.is_working,
-        "status": work_schedule.is_working
     }

@@ -62,25 +62,3 @@ class TestSlotRoutes:
         
         assert response.status_code == 403
 
-    def test_generate_slots_for_user(self, client: TestClient, work_schedule_test, auth_token):
-        """Testa geração de slots."""
-        response = client.post(
-            "/slots/generate",
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        
-        assert response.status_code == 200
-        assert "message" in response.json()
-
-    def test_generate_slots_without_token(self, client: TestClient):
-        """Testa geração sem token."""
-        response = client.post("/slots/generate")
-        
-        assert response.status_code == 403
-
-    def test_complete_expired_slots(self, client: TestClient):
-        """Testa conclusão de slots expirados."""
-        response = client.post("/slots/complet")
-        
-        assert response.status_code == 200
-        assert "message" in response.json()

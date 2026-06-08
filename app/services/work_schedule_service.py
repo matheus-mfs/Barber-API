@@ -1,8 +1,14 @@
 from fastapi import HTTPException
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.models import WorkSchedule, Slot
-from app.services.slot_service import generate_user_slots
+from app.models.schedule import WorkSchedule
+from app.models.slot import Slot, SlotStatus
+from app.models.permission import PermissionRole
+from app.models.user import User
+from app.schemas.work_schedule import WorkScheduleSchema, WorkScheduleStatusSchema, WorkScheduleEditSchema
+from app.services.permission_service import check_permission_user
+from app.services.slot_service import generate_user_slots, get_user_free_slots
+from app.services.user_service import get_user_by_id
 
 
 weekdays = {
@@ -16,7 +22,11 @@ weekdays = {
 }
 
 
-def get_work_schedule_by_weekday(session: Session, weekday: str, user_id: int) -> Optional[WorkSchedule]:
+def get_work_schedule_by_weekday(
+        session: Session, 
+        weekday: str, 
+        user_id: Optional[int] = None,
+) -> Optional[WorkSchedule]:
     """Recupera um horário de trabalho pelo dia da semana e ID do usuário.
 
     Args:
@@ -35,7 +45,12 @@ def get_work_schedule_by_weekday(session: Session, weekday: str, user_id: int) -
 
     return work_schedule
 
-def create_work_schedule_service(session: Session, current_user: int, weekday: str, work_schedule_schema) -> WorkSchedule:
+
+def create_work_schedule_service(
+        session: Session, 
+        current_user: User, 
+        work_schedule_schema=WorkScheduleSchema,
+) -> WorkSchedule:
     """Cria um novo horário de trabalho para o dia da semana e usuário especificados.
 
     Args:
@@ -48,20 +63,41 @@ def create_work_schedule_service(session: Session, current_user: int, weekday: s
         O objeto WorkSchedule criado
     """
 
-    weekday_search = session.query(WorkSchedule).filter(WorkSchedule.weekday == weekday, WorkSchedule.user_id == current_user.id).first()
-    
+    user_id = check_permission_user(
+        work_schedule_schema.user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_WORKSCHEDULE, 
+        PermissionRole.MANAGE_ALL_WORKSCHEDULES
+    )
+    weekday_search = (session.query(WorkSchedule)
+                      .filter(WorkSchedule.weekday==work_schedule_schema.weekday,
+                              WorkSchedule.user_id==user_id).first()
+    )
     if weekday_search:
         raise HTTPException(status_code=403, detail="Dia da semana ja cadastrado")
 
-    work_schedule = WorkSchedule(current_user.id, weekday, work_schedule_schema.work_start, work_schedule_schema.work_end,
-                                 work_schedule_schema.lunch_start, work_schedule_schema.lunch_end, work_schedule_schema.is_working)
+    work_schedule = WorkSchedule(
+        current_user.tenant_id,
+        user_id, 
+        work_schedule_schema.weekday, 
+        work_schedule_schema.work_start, 
+        work_schedule_schema.work_end,
+        work_schedule_schema.lunch_start, 
+        work_schedule_schema.lunch_end, 
+        work_schedule_schema.is_working
+    )
 
     session.add(work_schedule)
     session.commit()
 
     return work_schedule
 
-def list_work_schedules_service(session: Session, user_id: int) -> List[WorkSchedule]:
+
+def list_work_schedules_service(
+        session: Session, 
+        user_id: int
+) -> List[WorkSchedule]:
     """Recupera todos os horários de trabalho do usuário especificado.
 
     Args:
@@ -71,7 +107,7 @@ def list_work_schedules_service(session: Session, user_id: int) -> List[WorkSche
     Return:
         Lista de objetos WorkSchedule se encontrados, caso contrário lança HTTPException
     """
-
+    print("oi")
     work_schedules = session.query(WorkSchedule).filter(WorkSchedule.user_id == user_id).all()
 
     if not work_schedules:
@@ -79,7 +115,11 @@ def list_work_schedules_service(session: Session, user_id: int) -> List[WorkSche
 
     return work_schedules
 
-def update_work_schedule_service(session: Session, weekday: str, user_id: int, work_schedule_schema) -> WorkSchedule:
+def update_work_schedule_service(
+        session: Session, 
+        current_user: User, 
+        work_schedule_schema: WorkScheduleEditSchema,
+) -> WorkSchedule:
     """Atualiza um horário de trabalho existente para o dia da semana e usuário especificados.
 
     Args:
@@ -91,8 +131,20 @@ def update_work_schedule_service(session: Session, weekday: str, user_id: int, w
     Return:
         O objeto WorkSchedule atualizado
     """
+    
+    user_id = check_permission_user(
+        work_schedule_schema.user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_WORKSCHEDULE, 
+        PermissionRole.MANAGE_ALL_WORKSCHEDULES
+    )
 
-    work_schedule = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=user_id)
+    work_schedule = get_work_schedule_by_weekday(
+        session, 
+        work_schedule_schema.weekday,  
+        user_id
+    )
 
     work_schedule.work_start = work_schedule_schema.work_start
     work_schedule.work_end = work_schedule_schema.work_end
@@ -102,33 +154,12 @@ def update_work_schedule_service(session: Session, weekday: str, user_id: int, w
     session.commit()
     return work_schedule
 
-def block_weekday_service(session: Session, weekday: str, user_id: int) -> WorkSchedule:
-    """Bloqueia um dia da semana específico para o usuário e remove os slots relacionados.
 
-    Args:
-        session: Sessão do banco de dados SQLAlchemy
-        weekday: O dia da semana para desativar (ex: "monday")
-        user: Objeto do usuário cujo horário de trabalho será desativado
-    
-    Return: 
-        O objeto WorkSchedule atualizado
-    """
-
-    work_schedule = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=user_id)
-    work_schedule.is_working = False
-    
-    slots = session.query(Slot).filter(Slot.user_id == user_id).all()
-
-    for slot in slots:
-        date_slot = (slot.date_time_init.date())
-        weekday_slot = weekdays.get(date_slot.weekday())
-        if weekday_slot == weekday.value:
-            session.delete(slot)
-
-    session.commit()
-    return work_schedule
-
-def active_weekday_service(session: Session, weekday: str, user) -> WorkSchedule:
+def status_weekday_service(
+        session: Session, 
+        current_user: User,
+        work_schedule_status_schema: WorkScheduleStatusSchema,
+) -> WorkSchedule:
     """Ativa um dia da semana específico para o usuário e gera os slots do usuário.
 
     Args:
@@ -139,9 +170,42 @@ def active_weekday_service(session: Session, weekday: str, user) -> WorkSchedule
     Return: 
         O objeto WorkSchedule atualizado
     """
+    
+    user_id = check_permission_user(
+        work_schedule_status_schema.user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_WORKSCHEDULE, 
+        PermissionRole.MANAGE_ALL_WORKSCHEDULES
+    )
 
-    work_schedule = get_work_schedule_by_weekday(session=session, weekday=weekday, user_id=user.id)
-    work_schedule.is_working = True
+    work_schedule = get_work_schedule_by_weekday(
+        session, 
+        work_schedule_status_schema.weekday, 
+        user_id
+    )
 
-    generate_user_slots(session, user)
+    if work_schedule.is_working:
+        
+        work_schedule.is_working = False
+        
+        slots = get_user_free_slots(session, user_id, SlotStatus.FREE)
+        
+        if not slots:
+            session.commit()
+            return work_schedule
+        print("apagar 2")
+        for slot in slots:
+            date_slot = (slot.date_time_init.date())
+            weekday_slot = weekdays.get(date_slot.weekday())
+            if weekday_slot == work_schedule_status_schema.weekday.value:
+                session.delete(slot)
+        
+    else:
+        
+        work_schedule.is_working = True
+        user = get_user_by_id(session, user_id, current_user.tenant_id)
+        generate_user_slots(session, user)
+    
+    session.commit()
     return work_schedule

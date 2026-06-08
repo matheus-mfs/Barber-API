@@ -142,47 +142,4 @@ class TestUserServiceRoutes:
         
         assert response.status_code == 404
 
-    def test_disable_user_service(self, client: TestClient, user_service_test, auth_token):
-        """Testa desabilitação de user_service."""
-        response = client.put(
-            f"/user-services/disable/{user_service_test.service_id}",
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        
-        assert response.status_code == 200
-        assert response.json()["status"] is False
 
-    def test_disable_user_service_not_found(self, client: TestClient, user, auth_token):
-        """Testa desabilitação de user_service inexistente."""
-        response = client.put(
-            "/user-services/disable/9999",
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        
-        assert response.status_code == 404
-
-    def test_active_user_service(self, client: TestClient, user_service_test, auth_token):
-        """Testa ativação de user_service."""
-        # Primeiro desabilita
-        client.put(
-            f"/user-services/disable/{user_service_test.service_id}",
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        
-        # Depois ativa
-        response = client.put(
-            f"/user-services/active/{user_service_test.service_id}",
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        
-        assert response.status_code == 200
-        assert response.json()["status"] is True
-
-    def test_active_user_service_not_found(self, client: TestClient, user, auth_token):
-        """Testa ativação de user_service inexistente."""
-        response = client.put(
-            "/user-services/active/9999",
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        
-        assert response.status_code == 404

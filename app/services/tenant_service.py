@@ -13,9 +13,7 @@ def validate_dev_permission(current_user: User) -> None:
     
     Args:
         current_user: Usuário autenticado
-        
-    Raises:
-        HTTPException: Se o usuário não for desenvolvedor
+      
     """
     
     if current_user.role != UserRole.DEV:
@@ -32,8 +30,6 @@ def get_tenant_by_id(session: Session, tenant_id: int, current_user: User) -> Te
     Returns:
         Tenant: Tenant encontrado
         
-    Raises:
-        HTTPException: Se sem permissão ou tenant não encontrado
     """
     
     validate_dev_permission(current_user)
@@ -57,8 +53,6 @@ def create_tenant_service(session: Session, tenant_schema: TenantSchema, current
     Returns:
         Tenant: Tenant criado
         
-    Raises:
-        HTTPException: Se sem permissão
     """
     
     validate_dev_permission(current_user)
@@ -81,8 +75,6 @@ def update_tenant_service(session:Session, tenant_id:int, tenant_schema:TenantSc
     Returns:
         Tenant: Tenant atualizado
         
-    Raises:
-        HTTPException: Se sem permissão
     """
 
     tenant = get_tenant_by_id(session=session, tenant_id=tenant_id, current_user=current_user )

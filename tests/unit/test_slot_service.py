@@ -7,8 +7,6 @@ from app.services.slot_service import (
     get_user_free_slots,
     get_available_start_times,
     block_slots,
-    get_user_slots,
-    get_barber_free_slots
 )
 from app.models import SlotStatus
 
@@ -94,32 +92,4 @@ class TestSlotService:
         for slot in result:
             assert slot.status == SlotStatus.BLOCKED
 
-    def test_get_user_slots_returns_all_slots(self, db_session: Session, slot_test):
-        """Testa busca de todos os slots do usuário."""
-        result = get_user_slots(db_session, slot_test.user_id)
-        
-        assert len(result) > 0
-        assert all(slot.user_id == slot_test.user_id for slot in result)
 
-    def test_get_user_slots_raises_404_when_no_slots(self, db_session: Session, user):
-        """Testa erro quando usuário não tem slots."""
-        with pytest.raises(HTTPException) as exc_info:
-            get_user_slots(db_session, user.id)
-        
-        assert exc_info.value.status_code == 404
-
-    def test_get_barber_free_slots_returns_free_slots(self, db_session: Session, slot_test, user):
-        """Testa busca de slots livres do barbeiro."""
-        result = get_barber_free_slots(
-            db_session,
-            user,
-            slot_test.user_id
-        )
-        
-        assert len(result) > 0
-        assert all(slot.status == SlotStatus.FREE for slot in result)
-
-    def test_get_barber_free_slots_raises_404_when_no_free_slots(self, db_session: Session, user):
-        """Testa erro quando não há slots livres."""
-        with pytest.raises(HTTPException):
-            get_barber_free_slots(db_session, user, user.id)

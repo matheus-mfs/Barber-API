@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models import Service, User
+from app.models.tenant import Tenant
 
 
 def create_new_service(session: Session, current_user: User, service_schema: any) -> Service:
@@ -17,8 +18,6 @@ def create_new_service(session: Session, current_user: User, service_schema: any
     Returns:
         Service: Serviço criado
         
-    Raises:
-        HTTPException: Se o serviço já está cadastrado
     """
 
     service_schema.name = service_schema.name.lower().strip()
@@ -43,7 +42,7 @@ def create_new_service(session: Session, current_user: User, service_schema: any
 
     return service
 
-def list_tenant_services(session: Session, tenant_id: int) -> List[Service]:
+def list_tenant_services(session: Session, current_tenant: Tenant) -> List[Service]:
     """Lista todos os serviços ativos de um tenant.
     
     Args:
@@ -55,8 +54,11 @@ def list_tenant_services(session: Session, tenant_id: int) -> List[Service]:
     """
     
     service = session.query(Service).filter(
-        Service.tenant_id == tenant_id, Service.status == True
+        Service.tenant_id == current_tenant.id
     ).all()
+
+    if not service:
+        raise HTTPException(status_code=404, detail="Sem serviços cadastrados")
 
     return service
 
@@ -71,8 +73,6 @@ def get_service_by_id(session: Session, service_id: int, tenant_id: int) -> Serv
     Returns:
         Service: Serviço encontrado
         
-    Raises:
-        HTTPException: Se o serviço não for encontrado
     """
     
     service: Optional[Service] = session.query(Service).filter(
@@ -99,8 +99,6 @@ def update_service(session: Session, service_id: int, tenant_id: int, service_sc
     service: Service = get_service_by_id(
         session=session, service_id=service_id, tenant_id=tenant_id
     )
-    if not service:
-        raise HTTPException(status_code=404, detail="Nenhum servico encontrado")
 
     service.name = service_schema.name.lower().strip()
     service.duration = service_schema.duration

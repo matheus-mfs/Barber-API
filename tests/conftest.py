@@ -13,7 +13,8 @@ from app.core.auth import create_token, bcrypt_context
 from app.models import (
     Tenant, User, UserRole, Client, Service, 
     WorkSchedule, Weekdays, UserService, 
-    Slot, SlotStatus, Appointment, AppointmentStatus
+    Slot, SlotStatus, Appointment, AppointmentStatus,
+    Permission, UserPermission, PermissionRole
 )
 
 
@@ -95,9 +96,25 @@ def tenant(db_session: Session):
     return tenant
 
 
+@pytest.fixture(autouse=True)
+def permissions_setup(db_session: Session):
+    """Cria todas as permissões no banco de dados para testes."""
+    for permission_role in PermissionRole:
+        existing = db_session.query(Permission).filter(
+            Permission.name == permission_role
+        ).first()
+        
+        if not existing:
+            permission = Permission(name=permission_role)
+            db_session.add(permission)
+    
+    db_session.commit()
+    return db_session
+
+
 @pytest.fixture
 def user(db_session: Session, tenant: Tenant):
-    """Cria um usuário de teste (barbeiro)."""
+    """Cria um usuário de teste (barbeiro) com permissões."""
     password_hashed = bcrypt_context.hash("senha123")
     user = User(
         tenant_id=tenant.id,
@@ -109,22 +126,74 @@ def user(db_session: Session, tenant: Tenant):
     )
     db_session.add(user)
     db_session.commit()
+    
+    # Atribui permissões de barbeiro
+    barber_permissions = [
+        PermissionRole.MANAGE_OWN_USER_SERVICES,
+        PermissionRole.MANAGE_OWN_APPOINTMENTS,
+        PermissionRole.VIEW_CLIENTS,
+        PermissionRole.MANAGE_OWN_SLOTS,
+        PermissionRole.MANAGE_OWN_USER,
+        PermissionRole.MANAGE_OWN_WORKSCHEDULE,
+        PermissionRole.VIEW_OWN_REPORTS,
+    ]
+    
+    for permission_role in barber_permissions:
+        permission = db_session.query(Permission).filter(
+            Permission.name == permission_role
+        ).first()
+        
+        if permission:
+            user_permission = UserPermission(
+                user_id=user.id,
+                permission_id=permission.id
+            )
+            db_session.add(user_permission)
+    
+    db_session.commit()
     return user
 
 
 @pytest.fixture
 def admin_user(db_session: Session, tenant: Tenant):
-    """Cria um usuário admin de teste."""
+    """Cria um usuário owner (proprietário) de teste."""
     password_hashed = bcrypt_context.hash("admin123")
     admin = User(
         tenant_id=tenant.id,
         name="Admin User",
         email="admin@barbaria.com",
         password=password_hashed,
-        role=UserRole.ADMIN,
+        role=UserRole.OWNER,
         status=True
     )
     db_session.add(admin)
+    db_session.commit()
+    
+    # Atribui permissões de proprietário
+    owner_permissions = [
+        PermissionRole.MANAGE_ALL_USER_SERVICES,
+        PermissionRole.MANAGE_ALL_APPOINTMENTS,
+        PermissionRole.MANAGE_ALL_CLIENTS,
+        PermissionRole.MANAGE_SERVICES,
+        PermissionRole.MANAGE_ALL_SLOTS,
+        PermissionRole.MANAGE_ALL_USERS,
+        PermissionRole.MANAGE_ALL_WORKSCHEDULES,
+        PermissionRole.VIEW_ALL_REPORTS,
+        PermissionRole.MANAGE_TENANT,
+    ]
+    
+    for permission_role in owner_permissions:
+        permission = db_session.query(Permission).filter(
+            Permission.name == permission_role
+        ).first()
+        
+        if permission:
+            user_permission = UserPermission(
+                user_id=admin.id,
+                permission_id=permission.id
+            )
+            db_session.add(user_permission)
+    
     db_session.commit()
     return admin
 
@@ -188,6 +257,7 @@ def user_service_test(db_session: Session, tenant: Tenant, user: User, service_t
 def work_schedule_test(db_session: Session, user: User):
     """Cria um horário de trabalho para o usuário."""
     schedule = WorkSchedule(
+        tenant_id=user.tenant_id,
         user_id=user.id,
         weekday=Weekdays.MONDAY,
         work_start=time(9, 0),

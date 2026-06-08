@@ -8,6 +8,9 @@ from zoneinfo import ZoneInfo
 
 from app.core.config import settings
 from app.models import Slot, SlotStatus, User, UserService, WorkSchedule
+from app.models.permission import PermissionRole
+from app.schemas.slot_schema import SlotBlockSchema
+from app.services.permission_service import check_permission_user
 
 time_zone: ZoneInfo = ZoneInfo(settings.TIME_ZONE)
 
@@ -22,7 +25,7 @@ WEEKDAYS_MAPPING: Dict[int, str] = {
 }
 
 
-def get_user_free_slots(session: Session, user_id: int) -> List[Slot]:
+def get_user_free_slots(session: Session, user_id: int, status:SlotStatus) -> List[Slot]:
     """Obtém todos os slots livres de um barbeiro.
     
     Args:
@@ -32,11 +35,9 @@ def get_user_free_slots(session: Session, user_id: int) -> List[Slot]:
     Returns:
         List[Slot]: Lista de slots livres
         
-    Raises:
-        HTTPException: Se nenhum slot livre for encontrado
     """
     slots = session.query(Slot).filter(
-        Slot.user_id == user_id, Slot.status == SlotStatus.FREE
+        Slot.user_id == user_id, Slot.status == status
     ).order_by(Slot.date_time_init).all()
     
     if not slots:
@@ -45,7 +46,12 @@ def get_user_free_slots(session: Session, user_id: int) -> List[Slot]:
     return slots
 
 
-def get_available_start_times(service_id: int, user_id: int, session: Session) -> List[datetime]:
+def get_available_start_times(
+        service_id: int, 
+        user_id: int, 
+        tenant_id:int, 
+        session: Session
+) -> List[datetime]:
     """Obtém os horários disponíveis para um serviço.
     
     Args:
@@ -56,19 +62,20 @@ def get_available_start_times(service_id: int, user_id: int, session: Session) -
     Returns:
         List[datetime]: Lista de horários de início disponíveis
         
-    Raises:
-        HTTPException: Se o serviço não for encontrado
     """
     
     service = session.query(UserService).filter(
-        UserService.service_id == service_id, UserService.user_id == user_id
+        UserService.service_id == service_id, 
+        UserService.user_id == user_id,
+        UserService.tenant_id == tenant_id
     ).first()
     
     if not service:
+        
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
 
     required_slots: int = ceil(service.custom_duration / 15)
-    free_slots: List[Slot] = get_user_free_slots(session, user_id)
+    free_slots: List[Slot] = get_user_free_slots(session, user_id, SlotStatus.FREE)
     max_index: int = len(free_slots) - required_slots + 1
     available_times: List[datetime] = []
 
@@ -90,7 +97,11 @@ def get_available_start_times(service_id: int, user_id: int, session: Session) -
     return available_times
 
 
-def block_slots(session: Session, user_id: int, init_block: datetime, end_block: datetime) -> List[Slot]:
+def block_slots(
+        session: Session, 
+        current_user: User, 
+        slot_block_schema: SlotBlockSchema, 
+) -> List[Slot]:
     """Bloqueia slots em um período de tempo.
     
     Args:
@@ -103,10 +114,19 @@ def block_slots(session: Session, user_id: int, init_block: datetime, end_block:
         List[Slot]: Lista de slots bloqueados
     """
     
-    current_time: datetime = init_block
+    user_id = check_permission_user(
+        slot_block_schema.user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_SLOTS, 
+        PermissionRole.MANAGE_ALL_SLOTS
+    )
+    
+    current_time: datetime = slot_block_schema.init_block
     blocked_slots: List[Slot] = []
     
-    while current_time < end_block:
+    while current_time < slot_block_schema.end_block:
+        
         slot = session.query(Slot).filter(
             Slot.date_time_init == current_time, Slot.user_id == user_id
         ).first()
@@ -118,7 +138,6 @@ def block_slots(session: Session, user_id: int, init_block: datetime, end_block:
         current_time += timedelta(minutes=15)
 
     session.commit()
-    
     return blocked_slots
 
 def generate_user_slots(session: Session, user: User) -> None:
@@ -128,8 +147,6 @@ def generate_user_slots(session: Session, user: User) -> None:
         session: Sessão do banco de dados
         user: Usuário barbeiro
         
-    Raises:
-        HTTPException: Se nenhuma agenda de trabalho for encontrada
     """
     
     work_schedules = session.query(WorkSchedule).filter(
@@ -216,53 +233,3 @@ def complete_expired_slots(session: Session) -> None:
         slot.status = SlotStatus.BLOCKED
 
     session.commit()
-
-
-def get_user_slots(session: Session, user_id: int) -> List[Slot]:
-    """Obtém todos os slots de um barbeiro.
-    
-    Args:
-        session: Sessão do banco de dados
-        user_id: ID do barbeiro
-        
-    Returns:
-        List[Slot]: Lista de slots
-        
-    Raises:
-        HTTPException: Se nenhum slot for encontrado
-    """
-    
-    slots= session.query(Slot).filter(
-        Slot.user_id == user_id
-    ).all()
-    
-    if not slots:
-        raise HTTPException(status_code=404, detail="Horario nao encontrado")
-
-    return slots
-
-
-def get_barber_free_slots(session: Session, current_user: User, user_id: int) -> List[Slot]:
-    """Obtém slots livres de um barbeiro.
-    
-    Args:
-        session: Sessão do banco de dados
-        current_user: Usuário autenticado
-        user_id: ID do barbeiro
-        
-    Returns:
-        List[Slot]: Lista de slots livres
-        
-    Raises:
-        HTTPException: Se nenhum slot livre for encontrado
-    """
-    
-    slots= session.query(Slot).filter(
-        Slot.user_id == user_id, Slot.status == SlotStatus.FREE
-    ).all()
-    
-    if not slots:
-        raise HTTPException(status_code=404, detail="Sem horarios livres")
-
-    return slots
-
