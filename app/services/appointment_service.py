@@ -15,10 +15,13 @@ from app.models import (
     SlotStatus,
     UserService,
 )
+from app.models.client import Client
 from app.models.permission import PermissionRole
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.appointment_schema import AppointmentSchemas
 from app.services.permission_service import check_permission_user
+from app.services.whatsapp_service import send_message
 
 time_zone: ZoneInfo = ZoneInfo(settings.TIME_ZONE)
 
@@ -214,6 +217,26 @@ def put_cancel_appointment(
         raise HTTPException(status_code=404, detail="Nada encontrado")
     
     appointment.status = AppointmentStatus.CANCELLED
+
+    client = session.query(Client).filter(Client.id==appointment.client_id).first()
+    tenant = session.query(Tenant).filter(Tenant.id==appointment.tenant_id).first()
+    number_client = client.telephone
+    message = f"""Olá, {client.name}.
+    
+Infelizmente, por um imprevisto, precisaremos cancelar seu horário agendado para {appointment.start_time.date()} ás {appointment.start_time.time()}.
+
+Pedimos desculpas pelo transtorno e estamos à disposição para reagendar em um novo horário que seja conveniente para você.
+
+Entre em contato conosco para escolher uma nova data, ou aguarde que retornaremos com opções disponíveis.
+
+Agradecemos pela compreensão e esperamos atendê-lo em breve.
+
+Atenciosamente,
+
+{tenant.name} ✂️
+    """
+
+    send_message(number_client, message)
 
     
     session.commit()
