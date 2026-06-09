@@ -7,8 +7,6 @@ from app.models import User, Permission, UserPermission, PermissionRole, UserRol
 from fastapi import Depends, HTTPException
 
 
-
-
 BARBER_PERMISSIONS = [
     PermissionRole.MANAGE_OWN_USER_SERVICES,
     PermissionRole.MANAGE_OWN_APPOINTMENTS,
@@ -44,7 +42,6 @@ def assign_barber_permissions(user: User, session: Session) -> None:
     """
     _assign_permissions(user, BARBER_PERMISSIONS, session)
 
-
 def assign_owner_permissions(user: User, session: Session) -> None:
     """Atribui permissões padrão de proprietário a um novo usuário.
     
@@ -56,7 +53,6 @@ def assign_owner_permissions(user: User, session: Session) -> None:
         HTTPException: Se não conseguir atribuir as permissões
     """
     _assign_permissions(user, OWNER_PERMISSIONS, session)
-
 
 def _assign_permissions(
     user: User, 
@@ -102,7 +98,6 @@ def _assign_permissions(
     # Commit de todas as permissões de uma vez
     session.commit()
 
-
 def get_default_permissions_for_role(role: UserRole) -> list[PermissionRole]:
     """Retorna a lista de permissões padrão para um role.
     
@@ -119,8 +114,18 @@ def get_default_permissions_for_role(role: UserRole) -> list[PermissionRole]:
     else:
         return []
 
-def get_list_permissions_user(user_id: int, session: Session = Depends(get_session)) -> list[PermissionRole]:
-
+def get_list_permissions_user(
+        user_id: int, 
+        session: Session = Depends(get_session)
+) -> list[PermissionRole]:
+    """Listar permissões do usuario
+    Args:
+        user_id: ID do usuario
+        session: Sessao do banco de dados
+    
+    Return:
+        List[PermissionRole]: Lista de permissões
+    """
     permissions = session.query(UserPermission).filter(UserPermission.user_id==user_id).all()
     if not permissions:
         raise HTTPException(status_code=404, detail="nenhum permissão atribuiada a usuario")
@@ -137,7 +142,19 @@ def check_permission_user(
           session:Session, 
           permission_barber:PermissionRole, 
           permission_owner:PermissionRole
-):
+) -> int:
+    """Verificar se tem permissao permissão 
+    Args:
+        user_id: ID do usuario
+        current_user: Usuario logado
+        session: sessao do banco de dados
+        permission_barber: Permissao necessaria user
+        permission_ower: Permissao necessaria owner
+    Return:
+        user_id: ID do usuario
+    """
+
+
     from app.services.user_service import get_user_by_id
     
     list_permissions_user = get_list_permissions_user(current_user.id, session)

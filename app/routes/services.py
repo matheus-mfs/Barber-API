@@ -26,7 +26,8 @@ def create_service(
     session: Session = Depends(get_session), 
     current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
 )-> Dict[str, Any]:
-    
+    """Criar serviço do tenant"""
+
     service = create_new_service(session, current_user, service_schema)
     return {
             "mensagem": f"Servico criado com sucesso",
@@ -39,6 +40,7 @@ def list_service(
     session: Session = Depends(get_session), 
     current_tenant: Tenant = Depends(get_tenant)
 )-> list[Dict[str, Any]]:
+    """Listar serviço do tenant"""
     
     services = list_tenant_services(session, current_tenant)
     return [
@@ -57,6 +59,7 @@ def search_service(
     session: Session = Depends(get_session), 
     current_tenant: Tenant = Depends(get_tenant)
 )-> Dict[str, Any]:
+    """Buscar serviços no tenant"""
     
     s = get_service_by_id(session, id_service, current_tenant.id)
     return {
@@ -75,6 +78,7 @@ def edit_service(
     session: Session = Depends(get_session), 
     current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
 )-> Dict[str, Any]:
+    """Editar serviços no tenant"""
     
     s = update_service(session, id_service, current_user.tenant_id,  service_schema)
     return {
@@ -93,6 +97,7 @@ def status_service(
     session: Session = Depends(get_session), 
     current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
 )-> Dict[str, Any]:
+    """Ativar/desativar serviços no tenant"""
     
     service = status_service_by_id(session, id_service, current_user.tenant_id)
     return {

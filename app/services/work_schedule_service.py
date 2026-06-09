@@ -7,7 +7,7 @@ from app.models.permission import PermissionRole
 from app.models.user import User
 from app.schemas.work_schedule import WorkScheduleSchema, WorkScheduleStatusSchema, WorkScheduleEditSchema
 from app.services.permission_service import check_permission_user
-from app.services.slot_service import generate_user_slots, get_user_free_slots
+from app.services.slot_service import generate_daily_slots, get_user_free_slots
 from app.services.user_service import get_user_by_id
 
 
@@ -45,7 +45,6 @@ def get_work_schedule_by_weekday(
 
     return work_schedule
 
-
 def create_work_schedule_service(
         session: Session, 
         current_user: User, 
@@ -56,7 +55,6 @@ def create_work_schedule_service(
     Args:
         session: Sessão do banco de dados SQLAlchemy
         current_user: O ID do usuário atual que está criando o horário de trabalho
-        weekday: O dia da semana para criar o horário de trabalho (ex: "monday")
         work_schedule_schema: Schema contendo os detalhes do horário de trabalho
 
     Returns:
@@ -93,7 +91,6 @@ def create_work_schedule_service(
 
     return work_schedule
 
-
 def list_work_schedules_service(
         session: Session, 
         user_id: int
@@ -124,8 +121,7 @@ def update_work_schedule_service(
 
     Args:
         session: Sessão do banco de dados SQLAlchemy
-        weekday: O dia da semana para atualizar o horário de trabalho (ex: "monday")
-        user_id: O ID do usuário cujo horário de trabalho será atualizado
+        current_user: O usuário logado
         work_schedule_schema: Schema contendo os detalhes atualizados do horário de trabalho
     
     Return:
@@ -154,18 +150,17 @@ def update_work_schedule_service(
     session.commit()
     return work_schedule
 
-
 def status_weekday_service(
         session: Session, 
         current_user: User,
         work_schedule_status_schema: WorkScheduleStatusSchema,
 ) -> WorkSchedule:
-    """Ativa um dia da semana específico para o usuário e gera os slots do usuário.
+    """Ativa/desativa um dia da semana específico para o usuário e gera os slots do usuário.
 
     Args:
         session: Sessão do banco de dados SQLAlchemy
-        weekday: O dia da semana para ativar (ex: "monday")
-        user: Objeto do usuário cujo horário de trabalho será ativado
+        current_user: O usuário logado
+        work_schedule_status_schema: Schema com detalhes para ativar e desativar
     
     Return: 
         O objeto WorkSchedule atualizado
@@ -178,7 +173,7 @@ def status_weekday_service(
         PermissionRole.MANAGE_OWN_WORKSCHEDULE, 
         PermissionRole.MANAGE_ALL_WORKSCHEDULES
     )
-
+    
     work_schedule = get_work_schedule_by_weekday(
         session, 
         work_schedule_status_schema.weekday, 
@@ -205,7 +200,7 @@ def status_weekday_service(
         
         work_schedule.is_working = True
         user = get_user_by_id(session, user_id, current_user.tenant_id)
-        generate_user_slots(session, user)
+        generate_daily_slots()
     
     session.commit()
     return work_schedule

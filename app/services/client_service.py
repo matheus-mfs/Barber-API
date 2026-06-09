@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from app.models import Client
 
 
-def create_new_client(session: Session, tenant_id: int, client_schema: any) -> Client:
+def create_new_client(
+        session: Session, 
+        tenant_id: int, 
+        client_schema: any
+) -> Client:
     """Cria um novo cliente.
     
     Args:
@@ -41,7 +45,10 @@ def create_new_client(session: Session, tenant_id: int, client_schema: any) -> C
     return new_client
 
 
-def list_tenant_clients(session: Session, tenant_id: int) -> List[Client]:
+def list_tenant_clients(
+        session: Session, 
+        tenant_id: int
+) -> List[Client]:
     """Lista todos os clientes de um tenant.
     
     Args:
@@ -63,7 +70,11 @@ def list_tenant_clients(session: Session, tenant_id: int) -> List[Client]:
     return clients
 
 
-def get_client_by_id(session: Session, client_id: int, tenant_id: int) -> Client:
+def get_client_by_id(
+        session: Session, 
+        client_id: int, 
+        tenant_id: int
+) -> Client:
     """Busca um cliente por ID.
     
     Args:

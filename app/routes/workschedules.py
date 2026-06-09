@@ -22,7 +22,8 @@ def create_work_schedule(
     current_user: User = Depends(check_token),
     session: Session = Depends(get_session)
 ) -> Dict[str, Any]:
-    print("oi")
+    """Criar horario de trabalho"""
+
     ws = create_work_schedule_service(session, current_user, work_schedule_schema)
     return {
         "id": ws.id,
@@ -40,7 +41,8 @@ def list_work_schedules(
     user_id: int,
     session: Session = Depends(get_session)
 ) -> List[Dict[str, Any]]:
-    
+    """Lista horarios de trabalho"""
+
     schedules = list_work_schedules_service(session, user_id)
     return [{
         "id": ws.id,
@@ -58,7 +60,8 @@ def search_work_schedule(
     weekday: Weekdays, 
     user_id: int ,
     session: Session = Depends(get_session)
-):
+) -> Dict[str, Any]:
+    """Buscar horarios de um determinado dia"""
     
     ws = get_work_schedule_by_weekday(session, weekday, user_id)
     return {
@@ -77,7 +80,8 @@ def edit_work_schedule(
     work_schedule_schema: WorkScheduleEditSchema, 
     current_user: User = Depends(check_token), 
     session: Session = Depends(get_session)
-):
+)-> Dict[str, Any]:
+    """Editar horario de um determinado dia"""
     
     ws = update_work_schedule_service(session, current_user, work_schedule_schema)
     return {
@@ -96,7 +100,8 @@ def status_weekday(
     work_schedule_status_schema: WorkScheduleStatusSchema,
     current_user: User = Depends(check_token), 
     session: Session = Depends(get_session)
-):
+)-> Dict[str, Any]:
+    """Ativar/Desativar um dia da semana"""
     
     work_schedule = status_weekday_service(session, current_user, work_schedule_status_schema)
     return {

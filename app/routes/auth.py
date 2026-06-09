@@ -71,6 +71,7 @@ def reset_password(
     session: Session = Depends(get_session)
 ) -> Dict[str, str]:
     """Realiza o reset de senha do usuario."""
+    
     put_reset_password(new_passoword, user, session)
     
     return{

@@ -23,6 +23,7 @@ def list_user(
     current_tenant: Tenant = Depends(get_tenant)
 ) -> List[UserResponseSchema]:
     """Lista todos os usuários do tenant."""
+
     users = list_users_service(session, current_tenant.id)
     return [
             {
@@ -44,6 +45,7 @@ def search_user(
     current_user: User = Depends(permission_required(PermissionRole.MANAGE_ALL_USERS))
 ) -> UserResponseSchema:
     """Busca um usuário específico."""
+
     return get_user_by_id(session, id_user, current_tenant.id)
 
 @router.put("/edit/{id_user}", response_model=UserResponseSchema)
@@ -54,6 +56,7 @@ def edit_user(
     current_user: User = Depends(check_token)
 ) -> UserResponseSchema:
     """Edita dados de um usuário."""
+
     return update_user_service(session, user_edit_schema, current_user, user_id)
 
 @router.post("/status/{id_user}")
@@ -63,6 +66,7 @@ def status_user(
     current_user: User = Depends(permission_required(PermissionRole.MANAGE_ALL_USERS))
 ) -> Dict[str, str]:
     """Desativa um usuário ou ativa"""
+    
     user: User = status_user_service(session, id_user, current_user)
     return {
             "id": user.id,

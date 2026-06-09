@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -23,8 +23,9 @@ def list_user_service(
     user_id:int, 
     session: Session = Depends(get_session),
     current_tenant: Tenant = Depends(get_tenant)
-    ):
-    
+)-> List[Dict[str,Any]]:
+    """Listar serviços de um usuario"""
+
     user_services = get_list_barber_service(user_id, session, current_tenant)
     return [
             {
@@ -44,7 +45,8 @@ def search_user_service(
     id_user:int, 
     session: Session = Depends(get_session),
     current_tenant: Tenant = Depends(get_tenant)
-):
+)-> Dict[str,Any]:
+    """Buscar serviço de um usuario"""
     
     us = get_id_user_service(id_service, id_user, current_tenant.id, session)
     return {
@@ -62,9 +64,9 @@ def add_user_service(
     user_service_schema:UserServiceSchema, 
     current_user: User = Depends(check_token), 
     session: Session = Depends(get_session)
-    
-):
-    
+)-> Dict[str,Any]:
+    """Adicionar serviço ao catalogo de um usuario"""
+
     us = post_add_barber_service(user_service_schema, current_user, session)
     return {
             "id": us.id, 
@@ -81,7 +83,8 @@ def edit_user_service(
     user_service_edit_schema: UserServiceEditSchema, 
     current_user: User = Depends(check_token), 
     session: Session = Depends(get_session)
-):
+)-> Dict[str,Any]:
+    """Editar um serviço de um usuario"""
     
     us = put_edit_user_service(user_service_edit_schema, current_user, session)
     return {
@@ -100,7 +103,8 @@ def status_user_service(
         user_id: Optional[int] = None,
         current_user: User = Depends(check_token), 
         session: Session = Depends(get_session)
-):
+)-> Dict[str,Any]:
+    """Ativar/desativar serviço de um usuario"""
     
     user_service = put_status_user_service(id_service, current_user, session, user_id)
     return{

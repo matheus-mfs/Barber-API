@@ -11,8 +11,33 @@ from app.routes import (
     user_service,
     workschedules,
 )
+from app.services.slot_service import close_expired_slots, generate_daily_slots
+from apscheduler.schedulers.background import BackgroundScheduler
+from contextlib import asynccontextmanager
 
-app: FastAPI = FastAPI(title="Barbearia API", version="0.1.0")
+scheduler = BackgroundScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.add_job(
+        generate_daily_slots,
+        "cron",
+        hour=4,
+        minute=5
+    )
+    scheduler.add_job(
+        close_expired_slots,
+        "interval",
+        minutes=5
+    )
+    scheduler.start()
+    
+    yield
+    
+    scheduler.shutdown()
+
+app: FastAPI = FastAPI(title="Barbearia API", version="0.1.0", lifespan=lifespan)
 
 app.include_router(auth.router)
 app.include_router(tenants.router)

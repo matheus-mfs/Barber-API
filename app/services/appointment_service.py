@@ -100,9 +100,10 @@ def get_list_appointment(
     """Lista todos os agendamentos de um barbeiro.
     
     Args:
-        user_id: ID do barbeiro
+        current_user: Usuario logado
         session: Sessão do banco de dados
-        
+        user_id: ID do barbeiro
+
     Returns:
         List[Appointment]: Lista de agendamentos
         
@@ -135,8 +136,9 @@ def get_today_appointment(
     """Lista agendamentos de hoje de um barbeiro.
     
     Args:
-        user_id: ID do barbeiro
+        current_user: Usuario logado
         session: Sessão do banco de dados
+        user_id: ID do barbeiro
         
     Returns:
         List[Appointment]: Lista de agendamentos de hoje
@@ -176,7 +178,8 @@ def get_search_appointment_id(
     Args:
         appointment_id: ID do agendamento
         session: Sessão do banco de dados
-        
+        current_user: Usuario logado
+
     Returns:
         Appointment: Agendamento encontrado
         
@@ -193,6 +196,7 @@ def get_search_appointment_id(
     return appointment
 
 def put_cancel_appointment(
+        user_id:int,
         appointment_id: int, 
         session: Session, 
         current_user: User
@@ -200,18 +204,34 @@ def put_cancel_appointment(
     """Cancela um agendamento.
     
     Args:
+        user_id: ID do usuario
         appointment_id: ID do agendamento
         session: Sessão do banco de dados
-        
+        current_user: Usuario logado
+
     Returns:
         Appointment: Agendamento cancelado
 
     """
     
-    appointment = session.query(Appointment).filter(
-        Appointment.id == appointment_id,
-        Appointment.tenant_id == current_user.tenant_id
-    ).first()
+    user_id = check_permission_user(
+        user_id, 
+        current_user, 
+        session, 
+        PermissionRole.MANAGE_OWN_APPOINTMENTS, 
+        PermissionRole.MANAGE_ALL_APPOINTMENTS
+    )
+
+    appointment = (
+        session.query(Appointment)
+        .join(UserService, Appointment.user_service_id == UserService.id)
+        .filter(
+            Appointment.id == appointment_id,
+            Appointment.tenant_id == current_user.tenant_id,
+            UserService.user_id == user_id
+        )
+        .first()
+    )
     
     if not appointment:
         raise HTTPException(status_code=404, detail="Nada encontrado")
@@ -239,6 +259,36 @@ Atenciosamente,
     send_message(number_client, message)
 
     
-    session.commit()
+    #session.commit()
 
     return appointment
+
+def find_appointments_in_period(
+        user_id:int,
+        currente_user:User, 
+        init_block: datetime, 
+        end_block: datetime, 
+        session:Session # type: ignore
+) -> List[Appointment]:
+    """Buscar agendamentos em um periodo
+    
+    Args:
+        user_id: ID do usuario
+        current_user: Usuario logado
+        init_block: data e horario de inicio da busca
+        end_block: data e horario do fim da busca
+        session: Sessão do Banco de dados
+    
+    Return:
+        List[Appointment]: Lista de agendamentos encontrados
+    """
+    
+    list_appointment = get_list_appointment(currente_user, session, user_id)
+
+    appointments: list = []
+    for appointment in list_appointment:
+        if appointment.start_time > init_block and appointment.start_time < end_block:
+            print(appointment.client_id)
+            appointments.append(appointment)
+
+    return appointments

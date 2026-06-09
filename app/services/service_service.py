@@ -5,9 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.models import Service, User
 from app.models.tenant import Tenant
+from app.schemas.service_schema import ServiceSchema
 
 
-def create_new_service(session: Session, current_user: User, service_schema: any) -> Service:
+def create_new_service(
+        session: Session, 
+        current_user: User, 
+        service_schema: any
+) -> Service:
     """Cria um novo serviço.
     
     Args:
@@ -47,7 +52,7 @@ def list_tenant_services(session: Session, current_tenant: Tenant) -> List[Servi
     
     Args:
         session: Sessão do banco de dados
-        tenant_id: ID do tenant
+        current_tenant: tenant atual
         
     Returns:
         List[Service]: Lista de serviços
@@ -83,7 +88,12 @@ def get_service_by_id(session: Session, service_id: int, tenant_id: int) -> Serv
 
     return service
 
-def update_service(session: Session, service_id: int, tenant_id: int, service_schema: any) -> Service:
+def update_service(
+        session: Session, 
+        service_id: int, 
+        tenant_id: int, 
+        service_schema: ServiceSchema
+) -> Service:
     """Atualiza dados de um serviço.
     
     Args:
@@ -106,7 +116,6 @@ def update_service(session: Session, service_id: int, tenant_id: int, service_sc
 
     session.commit()
     return service
-
 
 def status_service_by_id(session: Session, service_id: int, tenant_id: int) -> Service:
     """Alterna o status de um serviço.

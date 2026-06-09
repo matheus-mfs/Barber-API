@@ -19,7 +19,11 @@ def validate_dev_permission(current_user: User) -> None:
     if current_user.role != UserRole.DEV:
         raise HTTPException(status_code=403, detail="Acesso negado")
     
-def get_tenant_by_id(session: Session, tenant_id: int, current_user: User) -> Tenant:
+def get_tenant_by_id(
+        session: Session, 
+        tenant_id: int, 
+        current_user: User
+) -> Tenant:
     """Busca um tenant por ID.
     
     Args:
@@ -42,7 +46,11 @@ def get_tenant_by_id(session: Session, tenant_id: int, current_user: User) -> Te
 
     return tenant
 
-def create_tenant_service(session: Session, tenant_schema: TenantSchema, current_user: User) -> Tenant:
+def create_tenant_service(
+        session: Session, 
+        tenant_schema: TenantSchema, 
+        current_user: User
+) -> Tenant:
     """Cria um novo tenant.
     
     Args:
@@ -63,7 +71,12 @@ def create_tenant_service(session: Session, tenant_schema: TenantSchema, current
     session.commit()
     return tenant
 
-def update_tenant_service(session:Session, tenant_id:int, tenant_schema:TenantSchema, current_user:User) -> Tenant:
+def update_tenant_service(
+        session:Session, 
+        tenant_id:int, 
+        tenant_schema:TenantSchema, 
+        current_user:User
+) -> Tenant:
     """Atualizar dados de um tenant.
     
     Args:

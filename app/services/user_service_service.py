@@ -16,8 +16,8 @@ def post_add_barber_service(
 
     Args:
         user_service_schema (UserServiceSchema): O schema para criar user service.
-        current_user (User): Usuário autenticado.
-        session (Session): Sessão do banco de dados.
+        current_user : Usuário autenticado.
+        session : Sessão do banco de dados.
 
     Returns:
         UserService: O user service criado
@@ -59,13 +59,17 @@ def post_add_barber_service(
     session.commit()
     return user_service
 
-def get_list_barber_service(user_id: int, session:Session, current_tenant: Tenant) -> List[UserService]:
+def get_list_barber_service(
+        user_id: int, 
+        session:Session, 
+        current_tenant: Tenant
+) -> List[UserService]:
     """Retorna uma lista de todos os serviços de barbearia disponíveis para um usuário.
 
     Args:
         user_id (int): O id do usuario.
         session (Session): Sessão do banco de dados.
-
+        current_tenant: O tenant atual
     Returns:
         List[UserService]: Uma lista de User service.
 
@@ -81,13 +85,19 @@ def get_list_barber_service(user_id: int, session:Session, current_tenant: Tenan
         raise HTTPException(status_code=404, detail="Sem serviços no catalogo")
     return user_service
 
-def get_id_user_service(id_service: int, user_id: int, tenant_id: int, session: Session) -> UserService:
+def get_id_user_service(
+        id_service: int, 
+        user_id: int, 
+        tenant_id: int, 
+        session: Session
+) -> UserService:
     """Retorna um serviço de barbearia específico para um usuário.
 
     Args:
-        id_service (int): O id do servico.
-        user_id (int): O id do usuario.
-        session (Session): Sessão do banco de dados
+        id_service : O id do servico.
+        user_id : O id do usuario.
+        tenant_id: ID do tenant 
+        session : Sessão do banco de dados
 
     Returns:
         UserService: User service encontrado
@@ -113,10 +123,9 @@ def put_edit_user_service(
     """Editar um serviço de barbearia existente para um usuário.
 
     Args:
-        id_service (int): O id do servico.
-        user_service_edit_schema (UserServiceEditSchema): O schema para editar user service.
-        current_user (User): Usuário autenticado
-        session (Session): Sessão do banco de dados
+        user_service_edit_schema : O schema para editar user service.
+        current_user : Usuário autenticado
+        session : Sessão do banco de dados
 
     Returns:
         UserService: User service atualizado.
@@ -148,9 +157,10 @@ def put_status_user_service(
     """Ativar/Desativar um user service para um usuario.
 
     Args:
-        id_service (int): O id do servico.
-        current_user (User): Usuário autenticado
-        session (Session): Sessão do banco de dados
+        id_service : O id do servico.
+        current_user : Usuário autenticado
+        session : Sessão do banco de dados
+        user_id: id do usuario
 
     Returns:
         UserService: User service ativado ou desativado.
