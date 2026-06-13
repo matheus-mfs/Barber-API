@@ -1,6 +1,7 @@
 """Modelos de Service (Serviços)."""
 from datetime import timezone, datetime
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Numeric, UniqueConstraint
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -41,9 +42,13 @@ class UserService(Base):
     status = Column("status", Boolean, default=True)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
+    appointments = relationship("Appointment", back_populates="user_service")
+    user = relationship("User", back_populates="user_services")
+
     def __init__(self, tenant_id, service_id, user_id, custom_duration, custom_price):
         self.tenant_id = tenant_id
         self.service_id = service_id
         self.user_id = user_id
         self.custom_duration = custom_duration
         self.custom_price = custom_price
+

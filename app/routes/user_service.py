@@ -18,7 +18,7 @@ from app.services.user_service_service import(
 
 router = APIRouter(prefix="/user-services", tags=["user-services"])
 
-@router.get("/list/{user_id}")
+@router.get("/{user_id}")
 def list_user_service(
     user_id:int, 
     session: Session = Depends(get_session),
@@ -39,7 +39,7 @@ def list_user_service(
             } for us in user_services
     ]
 
-@router.get("/search/{id_service}/{id_user}")
+@router.get("/users/{id_user}/service/{id_service}")
 def search_user_service(
     id_service:int, 
     id_user:int, 
@@ -59,7 +59,7 @@ def search_user_service(
             "status": us.status
         }
 
-@router.post("/add")
+@router.post("/")
 def add_user_service(
     user_service_schema:UserServiceSchema, 
     current_user: User = Depends(check_token), 
@@ -78,7 +78,7 @@ def add_user_service(
             "status": us.status
         }
 
-@router.put("/edit/")
+@router.put("/")
 def edit_user_service(
     user_service_edit_schema: UserServiceEditSchema, 
     current_user: User = Depends(check_token), 
@@ -97,7 +97,7 @@ def edit_user_service(
             "status": us.status
         }
 
-router.put("/status/{id_service}")
+router.patch("/{id_service}")
 def status_user_service(
         id_service:int, 
         user_id: Optional[int] = None,

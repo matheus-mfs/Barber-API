@@ -43,34 +43,43 @@ def post_create_appointment(
         
     """
     
-    user_service: Optional[UserService] = session.query(UserService).filter(
-        UserService.id == appointment_schemas.user_service_id).first()
-    
+    user_service: Optional[UserService] = (session.query(UserService)
+        .filter(UserService.id == appointment_schemas.user_service_id).first()
+    )
     if not user_service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     
-    end_time: datetime = appointment_schemas.start_time + timedelta(
-        minutes=user_service.custom_duration
-    )
-    
+    end_time: datetime = appointment_schemas.start_time + timedelta(minutes=user_service.custom_duration)
+    notify_at: datetime = appointment_schemas.start_time - timedelta(hours=1)
+
     appointment: Appointment = Appointment(
         tenant_id,
         appointment_schemas.client_id,
         appointment_schemas.user_service_id,
         appointment_schemas.start_time,
         end_time,
-        appointment_schemas.status,
+        notify_at,        
         
     )
     
     session.add(appointment)
     session.flush()
 
-    required_slots: int = ceil(user_service.custom_duration / 15)
+    post_create_appointment_slot(user_service.custom_duration, appointment.start_time, session, appointment)
+
+    return appointment
+
+def post_create_appointment_slot(duration_service:int, start_time:datetime, session:Session, appointment:Appointment):
     slots: List[AppointmentSlot] = []
+
+    required_slots: int = ceil(duration_service / 15)
+
+    user_service = (session.query(UserService)
+                    .filter(UserService.id == appointment.user_service_id).first()
+        )
     
     for step in range(required_slots):
-        slot_time: datetime = appointment_schemas.start_time + timedelta(
+        slot_time: datetime = start_time + timedelta(
             minutes=15 * step
         )
         slot: Optional[Slot] = session.query(Slot).filter(
@@ -82,15 +91,13 @@ def post_create_appointment(
             raise HTTPException(status_code=404, detail="Horário não encontrado")
         
         slot.status = SlotStatus.BOOKED
-        appointment_slot: AppointmentSlot = AppointmentSlot(
-            appointment.id, slot.id
-        )
+        appointment_slot: AppointmentSlot = AppointmentSlot(appointment.id, slot.id)
         slots.append(appointment_slot)
 
     session.add_all(slots)
+
     session.commit()
     
-    return appointment
 
 def get_list_appointment(
         current_user: User, 
@@ -171,7 +178,7 @@ def get_today_appointment(
 def get_search_appointment_id(
         appointment_id: int, 
         session: Session,
-        current_user: User
+        tenant_id: int
 ) -> Appointment:
     """Busca um agendamento específico.
     
@@ -187,7 +194,7 @@ def get_search_appointment_id(
 
     appointment = session.query(Appointment).filter(
         Appointment.id == appointment_id,
-        Appointment.tenant_id == current_user.tenant_id
+        Appointment.tenant_id == tenant_id
     ).first()
     
     if not appointment:
@@ -265,7 +272,7 @@ Atenciosamente,
 
 def find_appointments_in_period(
         user_id:int,
-        currente_user:User, 
+        current_user:User, 
         init_block: datetime, 
         end_block: datetime, 
         session:Session # type: ignore
@@ -283,7 +290,13 @@ def find_appointments_in_period(
         List[Appointment]: Lista de agendamentos encontrados
     """
     
-    list_appointment = get_list_appointment(currente_user, session, user_id)
+    if current_user.id != user_id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied"
+        )
+
+    list_appointment = get_list_appointment(current_user, session, user_id)
 
     appointments: list = []
     for appointment in list_appointment:
@@ -292,3 +305,37 @@ def find_appointments_in_period(
             appointments.append(appointment)
 
     return appointments
+
+def reschedule_appointment(        
+        id_appointment: int, 
+        new_start_time: datetime, 
+        session: Session,
+        tenant_id: int
+) -> Appointment:
+    
+    appointment = get_search_appointment_id(id_appointment, session, tenant_id) 
+
+    
+    duration_service = int((appointment.end_time - appointment.start_time).total_seconds() /60)
+    new_end_time = new_start_time + timedelta(minutes=duration_service)
+    
+    appointment.start_time = new_start_time
+    appointment.end_time = new_end_time
+    
+    appointment_slots = (
+        session.query(AppointmentSlot)
+            .filter(AppointmentSlot.appointment_id == id_appointment).all()
+    )
+
+    if not appointment_slots:
+        raise HTTPException(status_code=404, detail="erro")
+    
+    for a_s in appointment_slots:
+        session.delete(a_s)
+    
+    session.flush()
+    post_create_appointment_slot(duration_service, new_start_time, session, appointment)
+    
+    return appointment
+
+

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -23,7 +23,7 @@ def availability_slots(
     user_id:int, 
     session:Session = Depends(get_session),
     current_tenant:Tenant = Depends(get_tenant)
-) -> Dict[str,Any]:
+) -> List[Dict[str,Any]]:
     """Retorna os horarios disponiveis para agendamento"""
 
     availability = get_available_start_times(service_id, user_id, current_tenant.id, session)

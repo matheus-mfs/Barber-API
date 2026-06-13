@@ -34,6 +34,7 @@ class User(Base):
     # Relationships
     tenant = relationship("Tenant")
     permissions = relationship("Permission", secondary="user_permissions", back_populates="users")
+    user_services = relationship("UserService", back_populates="user")
 
     def __init__(self, tenant_id, name, email, password, role=UserRole.BARBER, status=True):
         self.tenant_id = tenant_id

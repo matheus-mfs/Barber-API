@@ -8,16 +8,16 @@ from app.models import Tenant, User
 from app.models.permission import PermissionRole
 from app.schemas.user_schema import UserEditSchema, UserResponseSchema
 from app.services.user_service import (
-
     status_user_service,
     get_user_by_id,
     list_users_service,
     update_user_service,
+    user_delete
 )
 
 router: APIRouter = APIRouter(prefix="/users", tags=["users"])
 
-@router.get("/list", response_model=List[UserResponseSchema])
+@router.get("/", response_model=List[UserResponseSchema])
 def list_user(
     session: Session = Depends(get_session),
     current_tenant: Tenant = Depends(get_tenant)
@@ -37,7 +37,7 @@ def list_user(
             }for user in users
     ]
 
-@router.get("/search/{id_user}", response_model=UserResponseSchema)
+@router.get("/{id_user}", response_model=UserResponseSchema)
 def search_user(
     id_user: int, 
     session: Session = Depends(get_session), 
@@ -48,7 +48,7 @@ def search_user(
 
     return get_user_by_id(session, id_user, current_tenant.id)
 
-@router.put("/edit/{id_user}", response_model=UserResponseSchema)
+@router.put("/{id_user}", response_model=UserResponseSchema)
 def edit_user(
     user_edit_schema: UserEditSchema,
     user_id: Optional[int] = None,
@@ -59,7 +59,19 @@ def edit_user(
 
     return update_user_service(session, user_edit_schema, current_user, user_id)
 
-@router.post("/status/{id_user}")
+@router.delete("/{id_user}")
+def delete_user(
+    id_user: int, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(permission_required(PermissionRole.MANAGE_ALL_USERS))
+) -> Dict[str, str]:
+    """Deletar usuario"""
+    user_delete(id_user,session, current_user.tenant_id)
+    return {
+        "message": "user delete success"
+    }
+
+@router.patch("/{id_user}")
 def status_user(
     id_user: int, 
     session: Session = Depends(get_session), 

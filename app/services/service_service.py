@@ -143,3 +143,22 @@ def status_service_by_id(session: Session, service_id: int, tenant_id: int) -> S
     
     session.commit()
     return service
+
+def service_delete(
+    id_service: int, 
+    session: Session,
+    tenant_id: int
+) -> None:
+    """Deletar Serviço
+    
+    Args:
+        id_service: ID do serviço
+        session: Sessão do banco de dados
+        tenant_id: ID do tenant
+    
+    """
+
+    service = get_service_by_id(session, id_service, tenant_id)
+
+    session.delete(service)
+    session.commit()

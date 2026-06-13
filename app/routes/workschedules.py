@@ -14,9 +14,9 @@ from app.services.work_schedule_service import (
     status_weekday_service
 )
 
-router = APIRouter(prefix="/workschedules",tags=["workschedules"])
+router = APIRouter(prefix="/work-schedules",tags=["work-schedules"])
 
-@router.post("/create")
+@router.post("/")
 def create_work_schedule(
     work_schedule_schema: WorkScheduleSchema, 
     current_user: User = Depends(check_token),
@@ -36,7 +36,7 @@ def create_work_schedule(
         "is_working": ws.is_working
     }
 
-@router.get("/list/{user_id}")
+@router.get("/users/{user_id}")
 def list_work_schedules(
     user_id: int,
     session: Session = Depends(get_session)
@@ -55,7 +55,7 @@ def list_work_schedules(
         "is_working": ws.is_working
     } for ws in schedules]
 
-@router.get("/search/{weekday}/user/{user_id}")
+@router.get("/users/{user_id}/{weekday}")
 def search_work_schedule(
     weekday: Weekdays, 
     user_id: int ,
@@ -75,7 +75,7 @@ def search_work_schedule(
         "is_working": ws.is_working
     }
 
-@router.put("/edit/")
+@router.put("/")
 def edit_work_schedule(
     work_schedule_schema: WorkScheduleEditSchema, 
     current_user: User = Depends(check_token), 
@@ -95,7 +95,7 @@ def edit_work_schedule(
         "is_working": ws.is_working
     }
 
-@router.put("/status/")
+@router.patch("/")
 def status_weekday(
     work_schedule_status_schema: WorkScheduleStatusSchema,
     current_user: User = Depends(check_token), 

@@ -20,7 +20,7 @@ from app.schemas.user_schema import LoginSchema, UserResponseSchema, UserSchema
 router: APIRouter = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/create_account", response_model=UserResponseSchema)
+@router.post("/register", response_model=UserResponseSchema)
 def create_account(
     user_schema: UserSchema, 
     session: Session = Depends(get_session), 
@@ -64,7 +64,7 @@ def user_refresh_token(user: User = Depends(check_token)) -> Dict[str, Any]:
     
     return refresh_token_service(user)
 
-@router.put("/reset-password")
+@router.put("/password")
 def reset_password(
     new_passoword:str, 
     user: User = Depends(permission_required(PermissionRole.MANAGE_OWN_USER)),

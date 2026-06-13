@@ -15,6 +15,8 @@ from app.services.slot_service import close_expired_slots, generate_daily_slots
 from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
 
+from app.services.whatsapp_service import send_reminders
+
 scheduler = BackgroundScheduler()
 
 
@@ -31,6 +33,12 @@ async def lifespan(app: FastAPI):
         "interval",
         minutes=5
     )
+    scheduler.add_job(
+        send_reminders,
+        "interval",
+        minutes=1
+    )
+
     scheduler.start()
     
     yield

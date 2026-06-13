@@ -1,6 +1,7 @@
 """Modelo de Client (Cliente)."""
 from datetime import timezone, datetime
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -13,6 +14,9 @@ class Client(Base):
     name = Column("name", String)
     telephone = Column("telephone", String)
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
+
+    appointments = relationship("Appointment", back_populates="client")
+    
 
     def __init__(self, tenant_id, name, telephone):
         self.tenant_id = tenant_id

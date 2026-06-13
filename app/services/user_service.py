@@ -124,3 +124,13 @@ def status_user_service(
     session.commit()
 
     return user
+
+def user_delete(
+    id_user: int, 
+    session: Session, 
+    tenant_id: int
+) -> None:
+    user = get_user_by_id(session, id_user, tenant_id)
+
+    session.delete(user)
+    session.commit()

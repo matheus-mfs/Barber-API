@@ -15,12 +15,13 @@ from app.services.service_service import (
     list_tenant_services,
     get_service_by_id,
     status_service_by_id,
-    update_service
+    update_service,
+    service_delete
 )
 
 router = APIRouter(prefix="/services", tags=["services"])
 
-@router.post("/create")
+@router.post("/")
 def create_service(
     service_schema: ServiceSchema, 
     session: Session = Depends(get_session), 
@@ -35,7 +36,7 @@ def create_service(
             "id_service":service.id
     }
 
-@router.get("/list")
+@router.get("/")
 def list_service(
     session: Session = Depends(get_session), 
     current_tenant: Tenant = Depends(get_tenant)
@@ -53,7 +54,7 @@ def list_service(
              } for s in services
         ]
 
-@router.get("/search/{id_service}")
+@router.get("/{id_service}")
 def search_service(
     id_service: int, 
     session: Session = Depends(get_session), 
@@ -71,7 +72,7 @@ def search_service(
             "tenant_id": s.tenant_id
         }
 
-@router.put("/edit/{id_service}")
+@router.put("/{id_service}")
 def edit_service(
     id_service: int, 
     service_schema: ServiceEditSchema, 
@@ -90,8 +91,21 @@ def edit_service(
             "tenant_id": s.tenant_id
         }
      
+@router.delete("/{id_service}")
+def delete_service(
+    id_service: int, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(permission_required(PermissionRole.MANAGE_SERVICES))
+)-> Dict[str, str]:
+    """Deletar um usuario"""
 
-@router.put("/status/{id_service}")
+    service_delete(id_service,session, current_user.tenant_id)
+    return {
+        "message": "service delete success"
+    }
+
+
+@router.patch("/{id_service}")
 def status_service(
     id_service: int, 
     session: Session = Depends(get_session), 

@@ -9,3 +9,10 @@ class ClientSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ClientEditSchema(BaseModel):
+    name: str
+    telephone: str
+
+    class Config:
+        from_attributes = True

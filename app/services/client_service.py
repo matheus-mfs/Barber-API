@@ -4,6 +4,8 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models import Client
+from app.models.appointment import Appointment
+from app.schemas.client_schema import ClientEditSchema
 
 
 def create_new_client(
@@ -95,3 +97,72 @@ def get_client_by_id(
         raise HTTPException(status_code=404, detail="Cliente nao encontrado")
 
     return client
+
+def edit_client_by_id(
+    id_client:int,
+    tenant_id:int,
+    client_edit_schema: ClientEditSchema,
+    session: Session
+) -> Client:
+    """Editar informações de um cliente
+
+    Args:
+        id_client: ID do client
+        tenant_id: ID do tenant
+        client_edit_schema: Schema com dados do cliente
+        session: Sessão do banco de dados
+
+    Return:
+        Client: Cliente editado
+    """
+
+
+    client = get_client_by_id(session, id_client, tenant_id)
+
+    client.name = client_edit_schema.name
+    client.telephone = client_edit_schema.telephone
+
+    session.commit()
+
+def list_appointment_client(
+    id_client:int,
+    tenant_id:int,
+    session: Session,
+) -> List[Appointment]:
+    """Buscar agendamentos feito por um client
+    
+    Args:
+        id_client: ID do client
+        tenant_id: ID do tenant
+        session: Sessão do banco de dados
+
+    Return:
+        List[Appointment] = Lista de agendamentos de um cliente
+    
+    """
+    
+    appointments = session.query(Appointment).filter(Appointment.client_id==id_client, Appointment.tenant_id==tenant_id).all()
+
+    if not appointments:
+        raise
+
+    return appointments
+
+def delete_client_by_id(
+        id_client:int,
+        tenant_id:int,
+        session:Session
+) -> None:
+    """Deletar um Cliente
+
+    Args:
+        id_client: ID do cliente
+        tenant_id: ID do Tenant do cliente
+        session: Sessao do banco de dados
+    
+    """
+    
+    client = get_client_by_id(session, id_client, tenant_id)
+    
+    session.delete(client)
+    session.commit()

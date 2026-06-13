@@ -1,7 +1,8 @@
 """Modelos de Appointment (Agendamentos)."""
 import enum
 from datetime import timezone, datetime
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum
+from sqlalchemy import Boolean, Column, Integer, ForeignKey, DateTime, Enum
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -24,14 +25,21 @@ class Appointment(Base):
     start_time = Column("start_time", DateTime, nullable=False)
     end_time = Column("end_time", DateTime, nullable=False)
     status = Column("status", Enum(AppointmentStatus), default=AppointmentStatus.PENDING)
+    notify_at = Column("notify_at", DateTime, nullable=True)       # 1h antes
+    notified = Column("notified", Boolean, default=False)  
     created_at = Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc))
 
-    def __init__(self, tenant_id, client_id, user_service_id, start_time, end_time, status=AppointmentStatus.PENDING):
+    client = relationship("Client", back_populates="appointments")
+    user_service = relationship("UserService", back_populates="appointments")
+
+    def __init__(self, tenant_id, client_id, user_service_id, start_time, end_time,  notify_at, notified=False, status=AppointmentStatus.PENDING,):
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.user_service_id = user_service_id
         self.start_time = start_time
         self.end_time = end_time
+        self.notify_at = notify_at
+        self.notified = notified
         self.status = status
 
 

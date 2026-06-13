@@ -12,3 +12,6 @@ class AppointmentSchemas(BaseModel):
 
     class config:
         from_attibutes = True 
+
+class RescheduleSchema(BaseModel):
+    pass

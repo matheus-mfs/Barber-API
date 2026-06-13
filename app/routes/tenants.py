@@ -16,7 +16,7 @@ from app.services.tenant_service import (
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
-@router.post("/create")
+@router.post("/")
 def create_tenant(
     tenant_schema: TenantSchema, 
     session: Session = Depends(get_session), 
@@ -32,7 +32,7 @@ def create_tenant(
             "status": tenant.status
         }
 
-@router.get("/search/{id_tenant}")
+@router.get("/{id_tenant}")
 def search_tenant(
     id_tenant: int, 
     session: Session = Depends(get_session), 
@@ -48,7 +48,7 @@ def search_tenant(
             "status": tenant.status
         }
 
-@router.put("/edit/{id_tenant}")
+@router.put("/{id_tenant}")
 def edit_tenant(
     id_tenant: int, 
     tenant_schema: TenantSchema, 
